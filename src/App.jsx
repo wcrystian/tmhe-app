@@ -331,7 +331,7 @@ export default function App() {
                 <Sparkles size={20} className="text-[#cfa855]" /> Bem-vindo ao TMHE
               </h2>
               <p className="text-slate-500 text-sm leading-relaxed">
-                Um espaço de comunhão e suporte espiritual. Estamos prontos para o ouvir e orar consigo.
+                Um espaço de comunhão e suporte espiritual. Estamos prontos para o ouvir e orar contigo.
               </p>
             </div>
 
