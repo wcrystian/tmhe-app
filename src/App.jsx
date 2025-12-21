@@ -90,7 +90,7 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'tmhe-church-app';
 
 const Logo = () => (
   <div className="flex flex-col items-center justify-center py-6">
-    <div className="relative flex items-center justify-center w-20 h-20 mb-2">
+    <div className="relative flex items-center justify-center w-70 h-70 mb-2">
       {/* Círculo dourado pulsante (opcional, pode remover se não quiser) */}
       <div className="absolute inset-0 border-2 border-[#cfa855] rounded-full animate-pulse"></div>
 
@@ -98,7 +98,7 @@ const Logo = () => (
       <img
         src="/logo.png"  // Certifique-se de que o nome do ficheiro está correto
         alt="TMHE Logo"
-        className="z-10 w-32 h-32 object-contain" // Ajuste w-14 e h-14 se precisar mudar o tamanho
+        className="z-10 w-52 h-52 object-contain" // Ajuste w-14 e h-14 se precisar mudar o tamanho
       />
     </div>
     <h1 className="text-2xl font-bold tracking-wider text-[#051c38]">TMHE</h1>
