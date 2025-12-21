@@ -98,7 +98,7 @@ const Logo = () => (
       <img
         src="/logo.png"  // Certifique-se de que o nome do ficheiro está correto
         alt="TMHE Logo"
-        className="z-10 w-38 h-38 object-contain" // Ajuste w-14 e h-14 se precisar mudar o tamanho
+        className="z-10 w-32 h-32 object-contain" // Ajuste w-14 e h-14 se precisar mudar o tamanho
       />
     </div>
     <h1 className="text-2xl font-bold tracking-wider text-[#051c38]">TMHE</h1>
