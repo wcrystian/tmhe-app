@@ -90,7 +90,7 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'tmhe-church-app';
 
 const Logo = () => (
   <div className="flex flex-col items-center justify-center py-6">
-    <div className="relative flex items-center justify-center w-42 h-42 mb-2">
+    <div className="relative flex items-center justify-center w-46 h-46 mb-2">
       {/* Círculo dourado pulsante (opcional, pode remover se não quiser) */}
       <div className="absolute inset-0 border-2 border-[#cfa855] rounded-full animate-pulse"></div>
 
