@@ -328,7 +328,7 @@ export default function App() {
             <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-[#cfa855]/5 rounded-bl-full -mr-8 -mt-8 transition-all group-hover:scale-110"></div>
               <h2 className="text-xl font-bold text-[#051c38] mb-2 flex items-center gap-2">
-                <Sparkles size={20} className="text-[#cfa855]" /> Bem-vindo à TMHE
+                <Sparkles size={20} className="text-[#cfa855]" /> Bem-vindo ao TMHE
               </h2>
               <p className="text-slate-500 text-sm leading-relaxed">
                 Um espaço de comunhão e suporte espiritual. Estamos prontos para o ouvir e orar consigo.
