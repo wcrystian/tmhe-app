@@ -102,7 +102,7 @@ const Logo = () => (
       />
     </div>
     <h1 className="text-2xl font-bold tracking-wider text-[#051c38]">TMHE</h1>
-    <p className="text-xs uppercase tracking-[0.2em] text-[#cfa855] font-medium text-center">Ministério de Fé & Vitória</p>
+    <p className="text-xs uppercase tracking-[0.2em] text-[#cfa855] font-medium text-center">Templo Missionário Há Esperança</p>
   </div>
 );
 
