@@ -41,7 +41,8 @@ import {
   Quote,
   Sparkles,
   Wand2,
-  Share2
+  Share2,
+  CalendarCheck
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO E SEGURANÇA ---
@@ -133,18 +134,16 @@ const Logo = () => (
 
 const Notification = ({ message, type, onClose }) => {
   useEffect(() => {
-    const timer = setTimeout(onClose, 4000);
+    const timer = setTimeout(onClose, 5000);
     return () => clearTimeout(timer);
   }, [onClose]);
 
-  const displayMessage = typeof message === 'string' ? message : String(message || "");
-
   return (
-    <div className={`fixed top-4 right-4 z-50 p-4 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce-in border ${
+    <div className={`fixed top-4 left-4 right-4 md:left-auto md:w-80 z-50 p-4 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce-in border ${
       type === 'success' ? 'bg-green-600 border-green-500 text-white' : 'bg-red-600 border-red-500 text-white'
     }`}>
-      {type === 'success' ? <CheckCircle2 size={20} /> : <X size={20} />}
-      <span className="font-medium text-sm">{displayMessage}</span>
+      {type === 'success' ? <CheckCircle2 size={24} className="shrink-0" /> : <X size={24} className="shrink-0" />}
+      <span className="font-bold text-sm leading-tight">{message}</span>
     </div>
   );
 };
@@ -219,7 +218,30 @@ export default function App() {
 
   const notify = (msg, type = 'success') => setNotification({ msg, type });
 
-  // Lógica de partilha REDESENHADA para ser infalível
+  const handleWhatsAppChange = (e) => {
+    let value = e.target.value.replace(/\D/g, "");
+    if (value.length > 11) value = value.slice(0, 11);
+    
+    let formatted = value;
+    if (value.length > 0) {
+      formatted = `(${value.slice(0, 2)}`;
+      if (value.length > 2) {
+        formatted += `) ${value.slice(2, 7)}`;
+        if (value.length > 7) {
+          formatted += `-${value.slice(7)}`;
+        }
+      }
+    }
+    setFormData({ ...formData, contact: formatted });
+  };
+
+  const handleDayToggle = (day) => {
+    const days = formData.preferredDays.includes(day)
+      ? formData.preferredDays.filter(d => d !== day)
+      : [...formData.preferredDays, day];
+    setFormData({ ...formData, preferredDays: days });
+  };
+
   const handleShare = async () => {
     const url = window.location.href;
     const shareData = {
@@ -228,7 +250,6 @@ export default function App() {
       url: url
     };
 
-    // Função interna para copiar link (fallback)
     const copyToClipboard = async () => {
       try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -247,19 +268,15 @@ export default function App() {
       }
     };
 
-    // Se estivermos num telemóvel e o navegador suportar partilha
     if (navigator.share) {
       try {
         await navigator.share(shareData);
       } catch (err) {
-        // Se o utilizador cancelou, não fazemos nada. 
-        // Se deu erro (como fechar sozinho), tentamos o copiar.
         if (err.name !== 'AbortError') {
           await copyToClipboard();
         }
       }
     } else {
-      // Se for computador ou navegador antigo, apenas copia o link
       await copyToClipboard();
     }
   };
@@ -296,16 +313,25 @@ export default function App() {
   };
 
   const handleSubmitRequest = async (type) => {
-    if (!formData.message) return notify('Escreva a sua mensagem.', 'error');
+    if (!formData.message && type !== 'visit') return notify('Escreva a sua mensagem.', 'error');
+    if (type === 'visit' && (!formData.name || !formData.contact || !formData.address)) {
+      return notify('Por favor, preencha nome, whatsapp e endereço.', 'error');
+    }
+    
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'requests'), {
         ...formData,
         type,
-        status: type === 'testimony' ? 'approved' : 'pending',
+        status: 'pending', // Todos começam como pendente
         createdAt: serverTimestamp(),
         userId: user.uid
       });
-      notify('Enviado com sucesso!');
+
+      const successMsg = type === 'visit' 
+        ? 'A igreja entrará em contato para confirmar a visita.' 
+        : 'Enviado com sucesso!';
+
+      notify(successMsg);
       setFormData({ name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false, title: '' });
       setAiResponse('');
       setView(type === 'testimony' ? 'testimonies' : 'home');
@@ -317,7 +343,7 @@ export default function App() {
   const handleUpdateStatus = async (id, newStatus) => {
     try {
       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', id), { status: newStatus });
-      notify('Estado atualizado.');
+      notify('Estado atualizado com sucesso.');
     } catch (err) { notify('Erro ao atualizar.', 'error'); }
   };
 
@@ -339,6 +365,7 @@ export default function App() {
 
   const safeRender = (val) => {
     if (val === null || val === undefined) return "";
+    if (Array.isArray(val)) return val.join(", ");
     if (typeof val === 'string' || typeof val === 'number') return val;
     return JSON.stringify(val);
   };
@@ -349,7 +376,8 @@ export default function App() {
   }, [allRequests, filterType]);
 
   const approvedTestimonies = useMemo(() => {
-    return allRequests.filter(r => r.type === 'testimony' && r.status === 'approved');
+    // Para testemunhos, mostramos todos que não foram deletados
+    return allRequests.filter(r => r.type === 'testimony');
   }, [allRequests]);
 
   if (loading) return (
@@ -534,34 +562,155 @@ export default function App() {
 
         {view === 'admin' && isAdmin && (
           <div className="space-y-5 animate-fade-in pb-12">
-            <div className="flex items-center justify-between bg-white p-5 rounded-3xl shadow-md">
+            <div className="flex items-center justify-between bg-white p-5 rounded-3xl shadow-md border border-slate-100">
               <h2 className="font-bold text-sm text-[#051c38] uppercase tracking-wider">Gestão Pastoral</h2>
-              <button onClick={() => setView('home')} className="p-2 text-red-500"><X size={20} /></button>
+              <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"><X size={20} /></button>
             </div>
-            <div className="space-y-4">
-              {filteredRequests.map(req => (
-                <div key={req.id} className="bg-white rounded-3xl p-6 border-l-8 border-[#cfa855] shadow-md relative group">
-                  <div className="absolute top-4 right-4 flex gap-2">
-                    <button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
-                  </div>
-                  <h4 className="font-black text-slate-800 text-sm mb-1">{req.isAnonymous ? 'Anónimo' : safeRender(req.name)}</h4>
-                  <p className="text-xs text-slate-500 mb-3 bg-slate-50 p-3 rounded-xl">"{safeRender(req.message)}"</p>
-                  
-                  <button 
-                    onClick={async () => {
-                      setAiLoading(true);
-                      const prompt = `Gera uma resposta pastoral curta e encorajadora para este pedido: "${req.message}". Português de Portugal.`;
-                      try {
-                        const res = await callGemini(prompt);
-                        notify(`Sugestão: ${res}`, 'success');
-                      } catch(e) { notify('Erro na IA.', 'error'); } finally { setAiLoading(false); }
-                    }}
-                    className="text-[10px] font-black text-[#cfa855] flex items-center gap-1 hover:underline"
-                  >
-                    <Sparkles size={10} /> Sugestão de Resposta IA
-                  </button>
-                </div>
+
+            {/* Filtro de Categorias */}
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+              {['all', 'prayer', 'visit', 'testimony'].map(cat => (
+                <button 
+                  key={cat} 
+                  onClick={() => setFilterType(cat)}
+                  className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                    filterType === cat ? 'bg-[#051c38] text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'
+                  }`}
+                >
+                  {cat === 'all' ? 'Todos' : cat === 'prayer' ? 'Orações' : cat === 'visit' ? 'Visitas' : 'Vitórias'}
+                </button>
               ))}
+            </div>
+
+            <div className="space-y-4">
+              {filteredRequests.map(req => {
+                // Lógica de Cores solicitada
+                let borderClass = 'border-slate-200';
+                let statusLabel = 'Pendente';
+                let statusBg = 'bg-slate-100 text-slate-500';
+
+                if (req.type === 'visit') {
+                  if (req.status === 'pending') {
+                    borderClass = 'border-red-400';
+                    statusLabel = 'Visita não confirmada';
+                    statusBg = 'bg-red-50 text-red-600';
+                  } else if (req.status === 'confirmed') {
+                    borderClass = 'border-yellow-400';
+                    statusLabel = 'Visita confirmada';
+                    statusBg = 'bg-yellow-50 text-yellow-700';
+                  } else if (req.status === 'completed') {
+                    borderClass = 'border-green-400';
+                    statusLabel = 'Visita realizada';
+                    statusBg = 'bg-green-50 text-green-700';
+                  }
+                } else {
+                  // Para orações e testemunhos
+                  if (req.status === 'completed') {
+                    borderClass = 'border-green-400 opacity-60';
+                    statusLabel = 'Concluído';
+                    statusBg = 'bg-green-50 text-green-700';
+                  } else {
+                    borderClass = req.type === 'prayer' ? 'border-red-400' : 'border-amber-400';
+                    statusLabel = 'Pendente';
+                    statusBg = 'bg-slate-50 text-slate-500';
+                  }
+                }
+
+                return (
+                  <div key={req.id} className={`bg-white rounded-3xl p-6 border-l-8 shadow-md relative group transition-all ${borderClass}`}>
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      <button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${statusBg}`}>
+                          {statusLabel}
+                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-slate-50 border border-slate-100 text-slate-400">
+                          {req.type === 'visit' ? 'Visita' : req.type === 'prayer' ? 'Oração' : 'Testemunho'}
+                        </span>
+                      </div>
+                      <h4 className="font-black text-slate-800 text-lg">{req.isAnonymous ? 'Anónimo' : safeRender(req.name)}</h4>
+                    </div>
+
+                    {req.type === 'visit' && (
+                      <div className="grid grid-cols-1 gap-3 mb-4">
+                        <div className="flex items-center gap-3 bg-blue-50/30 p-3 rounded-2xl border border-blue-100/50">
+                          <Phone size={16} className="text-blue-500" />
+                          <div>
+                            <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1">WhatsApp</p>
+                            <p className="text-sm font-bold text-slate-700">{safeRender(req.contact)}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-start gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                          <MapPin size={16} className="text-slate-400 mt-1" />
+                          <div>
+                            <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1">Endereço Completo</p>
+                            <p className="text-sm font-medium text-slate-600 leading-relaxed">{safeRender(req.address)}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                            <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1 flex items-center gap-1"><Calendar size={10} /> Dias</p>
+                            <p className="text-xs font-bold text-slate-600">{safeRender(req.preferredDays) || 'Não inf.'}</p>
+                          </div>
+                          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                            <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1 flex items-center gap-1"><Clock size={10} /> Horário</p>
+                            <p className="text-xs font-bold text-slate-600">{safeRender(req.timeSlot) || 'Não inf.'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-4">
+                      <p className="text-[9px] uppercase font-bold text-slate-400 mb-2">Observações / Mensagem</p>
+                      <p className="text-sm text-slate-600 italic leading-relaxed">"{safeRender(req.message)}"</p>
+                    </div>
+
+                    {/* Ações de Status */}
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-50">
+                      {req.type === 'visit' ? (
+                        <>
+                          {req.status === 'pending' && (
+                            <button 
+                              onClick={() => handleUpdateStatus(req.id, 'confirmed')}
+                              className="flex-1 flex items-center justify-center gap-2 py-2 bg-yellow-400 text-yellow-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-yellow-500 transition-all"
+                            >
+                              <CalendarCheck size={14} /> Confirmar Visita
+                            </button>
+                          )}
+                          {(req.status === 'pending' || req.status === 'confirmed') && (
+                            <button 
+                              onClick={() => handleUpdateStatus(req.id, 'completed')}
+                              className="flex-1 flex items-center justify-center gap-2 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all"
+                            >
+                              <CheckCircle2 size={14} /> Marcar Realizada
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        req.status !== 'completed' && (
+                          <button 
+                            onClick={() => handleUpdateStatus(req.id, 'completed')}
+                            className="w-full flex items-center justify-center gap-2 py-2 bg-[#051c38] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all"
+                          >
+                            <CheckCircle2 size={14} /> Marcar como Concluído
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              
+              {filteredRequests.length === 0 && (
+                <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-300 italic">
+                  Nenhum registo encontrado nesta categoria.
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -588,11 +737,92 @@ export default function App() {
               <h2 className="text-xl font-bold text-[#051c38]">Agendar Visita</h2>
             </div>
             <div className="space-y-5">
-              <input type="text" placeholder="Nome Completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-              <input type="tel" placeholder="Telemóvel / WhatsApp" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.contact} onChange={(e) => setFormData({...formData, contact: e.target.value})} />
-              <input type="text" placeholder="Morada completa" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
-              <textarea placeholder="Motivo da visita..." rows="5" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
-              <button onClick={() => handleSubmitRequest('visit')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all">Solicitar Visita</button>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Nome Completo</label>
+                <input 
+                  type="text" 
+                  placeholder="Seu nome" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
+                  value={formData.name} 
+                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">WhatsApp</label>
+                <input 
+                  type="tel" 
+                  placeholder="(21) 98765-4321" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
+                  value={formData.contact} 
+                  onChange={handleWhatsAppChange} 
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Endereço</label>
+                <input 
+                  type="text" 
+                  placeholder="Rua, número, bairro e complemento" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
+                  value={formData.address} 
+                  onChange={(e) => setFormData({...formData, address: e.target.value})} 
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase ml-2 tracking-widest flex items-center gap-2">
+                  <Calendar size={14} /> Melhor dia para a visita
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map(day => (
+                    <button 
+                      key={day} 
+                      onClick={() => handleDayToggle(day)} 
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                        formData.preferredDays.includes(day) 
+                          ? 'bg-[#cfa855] text-white border-transparent shadow-md' 
+                          : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest flex items-center gap-2">
+                  <Clock size={14} /> Horário sugerido (24h)
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="Ex: 14:30" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
+                  value={formData.timeSlot} 
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/\D/g, "");
+                    if (val.length > 4) val = val.slice(0, 4);
+                    if (val.length > 2) val = val.slice(0, 2) + ":" + val.slice(2);
+                    setFormData({...formData, timeSlot: val});
+                  }} 
+                />
+              </div>
+
+              <textarea 
+                placeholder="Observações adicionais..." 
+                rows="3" 
+                className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" 
+                value={formData.message} 
+                onChange={(e) => setFormData({...formData, message: e.target.value})}
+              ></textarea>
+
+              <button 
+                onClick={() => handleSubmitRequest('visit')} 
+                className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all mt-4"
+              >
+                <Calendar size={18} /> Agendar Visita
+              </button>
             </div>
           </div>
         )}
@@ -608,7 +838,6 @@ export default function App() {
           <span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
         </button>
 
-        {/* Botão central agora é Partilhar (com a lógica defensiva) */}
         <button 
           onClick={handleShare} 
           className="flex flex-col items-center gap-1.5 transition-all text-slate-400 hover:text-[#cfa855] active:scale-110"
@@ -635,6 +864,8 @@ export default function App() {
         .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
         .animate-slide-up { animation: slide-up 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.1); }
         .animate-bounce-in { animation: bounce-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
     </div>
   );
