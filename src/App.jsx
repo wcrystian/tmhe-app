@@ -84,37 +84,6 @@ try {
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'tmhe-church-app';
 const appId = rawAppId.replace(/\//g, '_');
 
-// --- INTEGRAÇÃO GEMINI API ---
-
-const callGemini = async (prompt, systemInstruction = "") => {
-  const apiKey = ""; 
-  const model = "gemini-2.5-flash-preview-09-2025";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-  const payload = {
-    contents: [{ parts: [{ text: prompt }] }],
-    systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined
-  };
-
-  const maxRetries = 5;
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const result = await response.json();
-      return result.candidates?.[0]?.content?.parts?.[0]?.text;
-    } catch (error) {
-      if (i === maxRetries - 1) throw error;
-      const delay = Math.pow(2, i) * 1000;
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-};
-
 // --- COMPONENTES AUXILIARES ---
 
 const Logo = () => (
@@ -224,8 +193,6 @@ export default function App() {
   const [allRequests, setAllRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiResponse, setAiResponse] = useState('');
   const [showSchedule, setShowSchedule] = useState(false);
   
   const isConfigPlaceholder = firebaseConfig.apiKey === "SUA_API_KEY_AQUI";
@@ -243,7 +210,8 @@ export default function App() {
     preferredDays: [],
     timeSlot: '',
     isAnonymous: false,
-    title: ''
+    title: '',
+    wantContact: false
   });
 
   useEffect(() => {
@@ -287,20 +255,26 @@ export default function App() {
 
   const notify = (msg, type = 'success') => setNotification({ msg, type });
 
-  const handleWhatsAppChange = (e) => {
-    let value = e.target.value.replace(/\D/g, "");
-    if (value.length > 11) value = value.slice(0, 11);
+  // Máscara para WhatsApp: (21) 98765-4321
+  const handleWhatsAppFormat = (value) => {
+    let v = value.replace(/\D/g, "");
+    if (v.length > 11) v = v.slice(0, 11);
     
-    let formatted = value;
-    if (value.length > 0) {
-      formatted = `(${value.slice(0, 2)}`;
-      if (value.length > 2) {
-        formatted += `) ${value.slice(2, 7)}`;
-        if (value.length > 7) {
-          formatted += `-${value.slice(7)}`;
+    let formatted = v;
+    if (v.length > 0) {
+      formatted = `(${v.slice(0, 2)}`;
+      if (v.length > 2) {
+        formatted += `) ${v.slice(2, 7)}`;
+        if (v.length > 7) {
+          formatted += `-${v.slice(7)}`;
         }
       }
     }
+    return formatted;
+  };
+
+  const handleWhatsAppChange = (e) => {
+    const formatted = handleWhatsAppFormat(e.target.value);
     setFormData({ ...formData, contact: formatted });
   };
 
@@ -350,22 +324,6 @@ export default function App() {
     }
   };
 
-  const handleGenerateComfort = async () => {
-    if (!formData.message) return notify('Escreva primeiro o seu pedido.', 'error');
-    setAiLoading(true);
-    setAiResponse('');
-    const prompt = `O utilizador fez o seguinte pedido de oração: "${formData.message}". Escreve uma breve mensagem de conforto bíblico (máximo 3 frases) em Português de Portugal. Inclui um versículo bíblico curto e inspirador, obrigatoriamente com a respetiva referência (Livro, Capítulo e Versículo).`;
-    const systemPrompt = "És um assistente pastoral do Templo Missionário Há Esperança. O teu objetivo é trazer esperança e conforto bíblico fundamentado nas Escrituras.";
-    try {
-      const response = await callGemini(prompt, systemPrompt);
-      setAiResponse(response);
-    } catch (err) {
-      notify('Erro ao gerar palavra de conforto.', 'error');
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   const handleLike = async (id) => {
     try {
       const testimonyRef = doc(db, 'artifacts', appId, 'public', 'data', 'requests', id);
@@ -379,11 +337,17 @@ export default function App() {
 
   const handleSubmitRequest = async (type) => {
     if (!formData.message && type !== 'visit') return notify('Escreva a sua mensagem.', 'error');
+    
     if (type === 'visit' && (!formData.name || !formData.contact || !formData.address)) {
       return notify('Por favor, preencha nome, whatsapp e endereço.', 'error');
     }
+    
     if (type === 'testimony' && (!formData.name || !formData.title || !formData.message)) {
       return notify('Preencha o seu nome, título e o seu testemunho.', 'error');
+    }
+
+    if (type === 'prayer' && formData.wantContact && !formData.contact) {
+      return notify('Por favor, informe o seu WhatsApp para contato.', 'error');
     }
     
     try {
@@ -393,7 +357,7 @@ export default function App() {
         status: 'pending', 
         createdAt: serverTimestamp(),
         userId: user.uid,
-        likes: 0
+        likes: type === 'testimony' ? 0 : null
       });
 
       const successMsg = type === 'visit' 
@@ -401,8 +365,7 @@ export default function App() {
         : 'Enviado com sucesso!';
 
       notify(successMsg);
-      setFormData({ name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false, title: '' });
-      setAiResponse('');
+      setFormData({ name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false, title: '', wantContact: false });
       setView(type === 'testimony' ? 'testimonies' : 'home');
     } catch (err) {
       notify('Erro ao enviar.', 'error');
@@ -568,28 +531,72 @@ export default function App() {
         {view === 'prayer' && (
           <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100">
             <div className="flex items-center gap-2 mb-8">
-              <button onClick={() => setView('home')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
+              <button onClick={() => setView('home')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><X size={20} /></button>
               <h2 className="text-xl font-bold text-[#051c38]">Pedido de Oração</h2>
             </div>
             <div className="space-y-5">
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <input type="checkbox" id="anon-p" checked={formData.isAnonymous} onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg" />
-                <label htmlFor="anon-p" className="text-sm font-bold text-slate-600 cursor-pointer">Enviar de forma anónima</label>
+                <input 
+                  type="checkbox" 
+                  id="anon-p" 
+                  checked={formData.isAnonymous} 
+                  onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})} 
+                  className="w-5 h-5 accent-[#cfa855] rounded-lg" 
+                />
+                <label htmlFor="anon-p" className="text-sm font-bold text-slate-600 cursor-pointer">Enviar de forma Anônima</label>
               </div>
+
               {!formData.isAnonymous && (
-                <input type="text" placeholder="O seu nome completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Seu Nome</label>
+                  <input 
+                    type="text" 
+                    placeholder="O seu nome completo" 
+                    className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
+                    value={formData.name} 
+                    onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                  />
+                </div>
               )}
-              <div className="relative">
-                <textarea placeholder="Partilhe o que vai no seu coração..." rows="5" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
-                <button 
-                  onClick={handleGenerateComfort} 
-                  disabled={aiLoading}
-                  className="absolute bottom-4 right-4 bg-white/80 shadow-sm text-[#cfa855] p-2 rounded-xl flex items-center gap-2 text-[10px] font-bold hover:bg-white transition-all border border-slate-100"
-                >
-                  {aiLoading ? "..." : <Sparkles size={12} />} IA Conforto
-                </button>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Pedido</label>
+                <textarea 
+                  placeholder="Partilhe o que vai no seu coração..." 
+                  rows="5" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" 
+                  value={formData.message} 
+                  onChange={(e) => setFormData({...formData, message: e.target.value})}
+                ></textarea>
               </div>
-              {aiResponse && <div className="bg-[#051c38] text-white p-5 rounded-2xl text-sm italic border-l-4 border-[#cfa855] animate-fade-in">{aiResponse}</div>}
+
+              {/* Opção de Contato */}
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    id="want-contact" 
+                    checked={formData.wantContact} 
+                    onChange={(e) => setFormData({...formData, wantContact: e.target.checked})} 
+                    className="w-5 h-5 accent-[#cfa855] rounded-lg shrink-0" 
+                  />
+                  <label htmlFor="want-contact" className="text-sm font-bold text-slate-600 cursor-pointer">Gostaria que a igreja entre em contato?</label>
+                </div>
+                
+                {formData.wantContact && (
+                  <div className="animate-fade-in pt-1">
+                    <label className="text-[10px] font-bold text-[#cfa855] uppercase ml-1 tracking-widest block mb-1">Seu WhatsApp</label>
+                    <input 
+                      type="tel" 
+                      placeholder="(21) 98765-4321" 
+                      className="w-full p-4 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#cfa855] font-bold" 
+                      value={formData.contact} 
+                      onChange={handleWhatsAppChange} 
+                    />
+                  </div>
+                )}
+              </div>
+
               <button onClick={() => handleSubmitRequest('prayer')} className="w-full bg-[#051c38] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl hover:bg-slate-900 transition-all active:scale-95">
                 <Send size={18} /> Enviar Pedido
               </button>
@@ -628,7 +635,7 @@ export default function App() {
                       {t.name ? t.name[0] : 'A'}
                     </div>
                     <div>
-                      <span className="font-black text-[10px] text-slate-500 uppercase tracking-widest block">{t.isAnonymous ? 'Anónimo' : safeRender(t.name)}</span>
+                      <span className="font-black text-[10px] text-slate-500 uppercase tracking-widest block">{t.isAnonymous ? 'Anônimo' : safeRender(t.name)}</span>
                       <span className="text-[8px] text-slate-300 font-bold uppercase tracking-tighter">Testemunho de Fé</span>
                     </div>
                   </div>
@@ -756,37 +763,42 @@ export default function App() {
                           {req.type === 'visit' ? 'Visita' : req.type === 'prayer' ? 'Oração' : 'Testemunho'}
                         </span>
                       </div>
-                      <h4 className="font-black text-slate-800 text-lg">{req.isAnonymous ? 'Anónimo' : safeRender(req.name)}</h4>
+                      <h4 className="font-black text-slate-800 text-lg">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4>
                     </div>
 
-                    {req.type === 'visit' && (
+                    {/* Exibição de Contato para Oração ou Visita */}
+                    {(req.type === 'visit' || (req.type === 'prayer' && req.wantContact)) && (
                       <div className="grid grid-cols-1 gap-3 mb-4">
-                        <div className="flex items-center gap-3 bg-blue-50/30 p-3 rounded-2xl border border-blue-100/50">
-                          <Phone size={16} className="text-blue-500" />
+                        <div className={`flex items-center gap-3 p-3 rounded-2xl border ${req.type === 'visit' ? 'bg-blue-50/30 border-blue-100/50' : 'bg-green-50/30 border-green-100/50'}`}>
+                          <Phone size={16} className={req.type === 'visit' ? 'text-blue-500' : 'text-green-500'} />
                           <div>
-                            <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1">WhatsApp</p>
+                            <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1">WhatsApp de Contato</p>
                             <p className="text-sm font-bold text-slate-700">{safeRender(req.contact)}</p>
                           </div>
                         </div>
                         
-                        <div className="flex items-start gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                          <MapPin size={16} className="text-slate-400 mt-1" />
-                          <div>
-                            <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1">Endereço Completo</p>
-                            <p className="text-sm font-medium text-slate-600 leading-relaxed">{safeRender(req.address)}</p>
-                          </div>
-                        </div>
+                        {req.type === 'visit' && (
+                          <>
+                            <div className="flex items-start gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                              <MapPin size={16} className="text-slate-400 mt-1" />
+                              <div>
+                                <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1">Endereço Completo</p>
+                                <p className="text-sm font-medium text-slate-600 leading-relaxed">{safeRender(req.address)}</p>
+                              </div>
+                            </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                            <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1 flex items-center gap-1"><Calendar size={10} /> Dias</p>
-                            <p className="text-xs font-bold text-slate-600">{safeRender(req.preferredDays) || 'Não inf.'}</p>
-                          </div>
-                          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                            <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1 flex items-center gap-1"><Clock size={10} /> Horário</p>
-                            <p className="text-xs font-bold text-slate-600">{safeRender(req.timeSlot) || 'Não inf.'}</p>
-                          </div>
-                        </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1 flex items-center gap-1"><Calendar size={10} /> Dias</p>
+                                <p className="text-xs font-bold text-slate-600">{safeRender(req.preferredDays) || 'Não inf.'}</p>
+                              </div>
+                              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1 flex items-center gap-1"><Clock size={10} /> Horário</p>
+                                <p className="text-xs font-bold text-slate-600">{safeRender(req.timeSlot) || 'Não inf.'}</p>
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
 
@@ -862,7 +874,7 @@ export default function App() {
         {view === 'visit' && (
           <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100">
             <div className="flex items-center gap-2 mb-8">
-              <button onClick={() => setView('home')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
+              <button onClick={() => setView('home')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><X size={20} /></button>
               <h2 className="text-xl font-bold text-[#051c38]">Agendar Visita</h2>
             </div>
             <div className="space-y-5">
@@ -999,3 +1011,4 @@ export default function App() {
     </div>
   );
 }
+
