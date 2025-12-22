@@ -39,20 +39,15 @@ import {
   AlertTriangle,
   ExternalLink,
   Quote,
-  Sparkles
+  Sparkles,
+  Wand2,
+  Share2
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO E SEGURANÇA ---
 
-/**
- * INSTRUÇÕES IMPORTANTES:
- * 1. Vá ao Console do Firebase (https://console.firebase.google.com/)
- * 2. Crie um projeto e adicione uma "Web App"
- * 3. Copie o objeto 'firebaseConfig' e substitua os valores abaixo.
- */
 const getFirebaseConfig = () => {
   try {
-    // Tenta obter do ambiente online (Canvas)
     if (typeof __firebase_config !== 'undefined' && __firebase_config) {
       return JSON.parse(__firebase_config);
     }
@@ -60,21 +55,19 @@ const getFirebaseConfig = () => {
     console.error("Erro ao ler __firebase_config:", e);
   }
 
-  // CONFIGURAÇÃO LOCAL: Substitua pelos seus dados reais aqui!
   return {
     apiKey: "AIzaSyC3xZnuo6BkMPtHBPkFgk6dZ5mbKePmwwM",
-  authDomain: "evangelismo-pedidos.firebaseapp.com",
-  projectId: "evangelismo-pedidos",
-  storageBucket: "evangelismo-pedidos.firebasestorage.app",
-  messagingSenderId: "750023798468",
-  appId: "1:750023798468:web:9e1d1faf0f3c7765b06391",
-  measurementId: "G-9VHTNBTD47"
+    authDomain: "evangelismo-pedidos.firebaseapp.com",
+    projectId: "evangelismo-pedidos",
+    storageBucket: "evangelismo-pedidos.firebasestorage.app",
+    messagingSenderId: "750023798468",
+    appId: "1:750023798468:web:9e1d1faf0f3c7765b06391",
+    measurementId: "G-9VHTNBTD47"
   };
 };
 
 const firebaseConfig = getFirebaseConfig();
 
-// Inicialização segura
 let app, auth, db;
 try {
   app = initializeApp(firebaseConfig);
@@ -84,25 +77,57 @@ try {
   console.error("Erro na inicialização do Firebase:", e);
 }
 
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'tmhe-church-app';
+const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'tmhe-church-app';
+const appId = rawAppId.replace(/\//g, '_');
+
+// --- INTEGRAÇÃO GEMINI API ---
+
+const callGemini = async (prompt, systemInstruction = "") => {
+  const apiKey = ""; 
+  const model = "gemini-2.5-flash-preview-09-2025";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined
+  };
+
+  const maxRetries = 5;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await response.json();
+      return result.candidates?.[0]?.content?.parts?.[0]?.text;
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      const delay = Math.pow(2, i) * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+};
 
 // --- COMPONENTES AUXILIARES ---
 
 const Logo = () => (
   <div className="flex flex-col items-center justify-center py-6">
-    <div className="relative flex items-center justify-center w-20 h-20 mb-2">
-      {/* Círculo dourado pulsante (opcional, pode remover se não quiser) */}
+    <div className="relative flex items-center justify-center w-44 h-44 mb-2">
       <div className="absolute inset-0 border-2 border-[#cfa855] rounded-full animate-pulse"></div>
-
-      {/* A SUA NOVA LOGO AQUI */}
       <img
-        src="/logo.png"  // Certifique-se de que o nome do ficheiro está correto
+        src="/logo.png"
         alt="TMHE Logo"
-        className="z-10 w-14 h-14 object-contain" // Ajuste w-14 e h-14 se precisar mudar o tamanho
+        className="z-10 w-32 h-32 object-contain"
+        onError={(e) => {
+          e.target.src = "https://via.placeholder.com/150?text=TMHE";
+        }}
       />
     </div>
     <h1 className="text-2xl font-bold tracking-wider text-[#051c38]">TMHE</h1>
-    <p className="text-xs uppercase tracking-[0.2em] text-[#cfa855] font-medium text-center">Templo Missionário Há Esperança</p>
+    <p className="text-xs uppercase tracking-[0.2em] text-[#cfa855] font-medium text-center px-4">Templo Missionário Há Esperança</p>
   </div>
 );
 
@@ -112,12 +137,14 @@ const Notification = ({ message, type, onClose }) => {
     return () => clearTimeout(timer);
   }, [onClose]);
 
+  const displayMessage = typeof message === 'string' ? message : String(message || "");
+
   return (
     <div className={`fixed top-4 right-4 z-50 p-4 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce-in border ${
       type === 'success' ? 'bg-green-600 border-green-500 text-white' : 'bg-red-600 border-red-500 text-white'
     }`}>
       {type === 'success' ? <CheckCircle2 size={20} /> : <X size={20} />}
-      <span className="font-medium">{message}</span>
+      <span className="font-medium text-sm">{displayMessage}</span>
     </div>
   );
 };
@@ -130,16 +157,16 @@ export default function App() {
   const [allRequests, setAllRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResponse, setAiResponse] = useState('');
   
   const isConfigPlaceholder = firebaseConfig.apiKey === "SUA_API_KEY_AQUI";
   const [configMissing, setConfigMissing] = useState(isConfigPlaceholder);
   
-  // Admin State
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPin, setAdminPin] = useState('');
   const [filterType, setFilterType] = useState('all');
 
-  // Form States
   const [formData, setFormData] = useState({
     name: '',
     contact: '',
@@ -148,9 +175,9 @@ export default function App() {
     preferredDays: [],
     timeSlot: '',
     isAnonymous: false,
+    title: ''
   });
 
-  // Autenticação
   useEffect(() => {
     if (configMissing) {
       setLoading(false);
@@ -175,7 +202,6 @@ export default function App() {
     });
   }, [configMissing]);
 
-  // Escuta de Dados (Real-time)
   useEffect(() => {
     if (!user || configMissing) return;
 
@@ -183,32 +209,72 @@ export default function App() {
     const unsubscribe = onSnapshot(q, 
       (snapshot) => {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Ordenação manual em memória (Regra 2)
         const sorted = data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
         setAllRequests(sorted);
       },
-      (err) => {
-        console.error("Erro no Banco de Dados:", err);
-      }
+      (err) => console.error("Erro no Banco de Dados:", err)
     );
-
     return () => unsubscribe();
   }, [user, configMissing]);
 
-  // Ações
   const notify = (msg, type = 'success') => setNotification({ msg, type });
 
+  const handleShare = async () => {
+    const shareData = {
+      title: 'Templo Missionário Há Esperança',
+      text: 'Olá! Conheça o aplicativo do TMHE para pedidos de oração, visitas e testemunhos.',
+      url: window.location.href
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = shareData.url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        notify('Link copiado para a área de transferência!');
+      }
+    } catch (err) {
+      console.log('Erro ao partilhar:', err);
+    }
+  };
+
+  const handleGenerateComfort = async () => {
+    if (!formData.message) return notify('Escreva primeiro o seu pedido.', 'error');
+    setAiLoading(true);
+    setAiResponse('');
+    const prompt = `O utilizador fez o seguinte pedido de oração: "${formData.message}". Escreve uma breve mensagem de conforto bíblico (máximo 3 frases) em Português de Portugal. Inclui um versículo bíblico curto e inspirador.`;
+    const systemPrompt = "És um assistente pastoral do Templo Missionário Há Esperança. O teu objetivo é trazer esperança e conforto bíblico.";
+    try {
+      const response = await callGemini(prompt, systemPrompt);
+      setAiResponse(response);
+    } catch (err) {
+      notify('Erro ao gerar palavra de conforto.', 'error');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleGenerateTitle = async () => {
+    if (!formData.message) return notify('Escreva o testemunho primeiro.', 'error');
+    setAiLoading(true);
+    const prompt = `Gera um título inspirador e curto (máximo 5 palavras) para este testemunho: "${formData.message}". Usa Português de Portugal.`;
+    try {
+      const response = await callGemini(prompt);
+      setFormData(prev => ({ ...prev, title: response.replace(/"/g, '') }));
+      notify('✨ Título sugerido com sucesso!');
+    } catch (err) {
+      notify('Erro ao gerar título.', 'error');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const handleSubmitRequest = async (type) => {
-    if (configMissing) {
-      notify('Configure o Firebase primeiro.', 'error');
-      return;
-    }
-
-    if (!formData.message) {
-      notify('Por favor, escreva a sua mensagem.', 'error');
-      return;
-    }
-
+    if (!formData.message) return notify('Escreva a sua mensagem.', 'error');
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'requests'), {
         ...formData,
@@ -217,40 +283,28 @@ export default function App() {
         createdAt: serverTimestamp(),
         userId: user.uid
       });
-      
-      const messages = {
-        prayer: 'Pedido de oração enviado com sucesso!',
-        visit: 'Solicitação de visita registada.',
-        testimony: 'O seu testemunho foi partilhado com a comunidade!'
-      };
-
-      notify(messages[type] || 'Enviado com sucesso!');
-      setFormData({ name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false });
+      notify('Enviado com sucesso!');
+      setFormData({ name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false, title: '' });
+      setAiResponse('');
       setView(type === 'testimony' ? 'testimonies' : 'home');
     } catch (err) {
-      notify('Erro ao enviar. Tente novamente.', 'error');
+      notify('Erro ao enviar.', 'error');
     }
   };
 
   const handleUpdateStatus = async (id, newStatus) => {
     try {
-      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', id), {
-        status: newStatus
-      });
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', id), { status: newStatus });
       notify('Estado atualizado.');
-    } catch (err) {
-      notify('Erro ao atualizar.', 'error');
-    }
+    } catch (err) { notify('Erro ao atualizar.', 'error'); }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Deseja eliminar este registo permanentemente?')) return;
+    if (!window.confirm('Eliminar permanentemente?')) return;
     try {
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', id));
       notify('Registo eliminado.');
-    } catch (err) {
-      notify('Erro ao eliminar.', 'error');
-    }
+    } catch (err) { notify('Erro ao eliminar.', 'error'); }
   };
 
   const checkAdmin = () => {
@@ -258,12 +312,15 @@ export default function App() {
       setIsAdmin(true);
       setView('admin');
       setAdminPin('');
-    } else {
-      notify('PIN Incorreto', 'error');
-    }
+    } else { notify('PIN Incorreto', 'error'); }
   };
 
-  // Filtros
+  const safeRender = (val) => {
+    if (val === null || val === undefined) return "";
+    if (typeof val === 'string' || typeof val === 'number') return val;
+    return JSON.stringify(val);
+  };
+
   const filteredRequests = useMemo(() => {
     if (filterType === 'all') return allRequests;
     return allRequests.filter(r => r.type === filterType);
@@ -273,36 +330,6 @@ export default function App() {
     return allRequests.filter(r => r.type === 'testimony' && r.status === 'approved');
   }, [allRequests]);
 
-  // Ecrã de Erro de Configuração
-  if (configMissing) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white text-center">
-        <div className="max-w-md w-full space-y-8">
-          <div className="bg-amber-500/20 p-5 rounded-full w-24 h-24 flex items-center justify-center mx-auto text-amber-500 border border-amber-500/30">
-            <AlertTriangle size={48} />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold italic tracking-tight">Quase lá!</h2>
-            <p className="text-slate-400">O seu aplicativo está pronto, mas precisa de ser ligado ao Firebase da sua igreja.</p>
-          </div>
-          <div className="bg-slate-800 rounded-2xl p-6 text-left border border-slate-700 space-y-4 shadow-2xl">
-            <h3 className="font-bold text-lg border-b border-slate-700 pb-2 flex items-center gap-2">
-              <ExternalLink size={18} className="text-[#cfa855]" /> Como resolver:
-            </h3>
-            <ol className="space-y-3 text-sm text-slate-300 list-decimal list-inside">
-              <li>Vá ao Console do Firebase e crie um projeto.</li>
-              <li>Ative o <b>Firestore</b> e <b>Auth Anónima</b>.</li>
-              <li>Copie a sua <code className="text-amber-400">apiKey</code> e cole no topo do ficheiro <code className="text-amber-400">App.jsx</code>.</li>
-            </ol>
-          </div>
-          <button onClick={() => setConfigMissing(false)} className="text-slate-500 text-xs underline hover:text-slate-300">
-            Ver apenas design (sem base de dados)
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   if (loading) return (
     <div className="flex items-center justify-center h-screen bg-[#f1f5f9]">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#cfa855]"></div>
@@ -311,27 +338,31 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] pb-24 font-sans text-slate-800 selection:bg-[#cfa855]/30">
-      {notification && (
-        <Notification message={notification.msg} type={notification.type} onClose={() => setNotification(null)} />
-      )}
+      {notification && <Notification message={notification.msg} type={notification.type} onClose={() => setNotification(null)} />}
 
-      {/* Header */}
-      <header className="bg-[#051c38] text-white shadow-2xl rounded-b-[2.5rem] sticky top-0 z-30 border-b border-[#cfa855]/20">
+      <header className="bg-[#051c38] text-white shadow-2xl rounded-b-[2.5rem] sticky top-0 z-30 border-b border-[#cfa855]/20 relative">
+        <div className="absolute top-6 right-6 z-40">
+           <button 
+             onClick={() => setView('login')} 
+             className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white/70 transition-all border border-white/5"
+           >
+             <Lock size={18} />
+           </button>
+        </div>
         <Logo />
       </header>
 
-      <main className="max-w-md mx-auto px-4 -mt-6">
+      <main className="max-w-md mx-auto px-4 mt-8">
         
-        {/* VIEW: HOME */}
         {view === 'home' && (
-          <div className="space-y-4 animate-fade-in pt-2">
+          <div className="space-y-4 animate-fade-in">
             <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-[#cfa855]/5 rounded-bl-full -mr-8 -mt-8 transition-all group-hover:scale-110"></div>
               <h2 className="text-xl font-bold text-[#051c38] mb-2 flex items-center gap-2">
-                <Sparkles size={20} className="text-[#cfa855]" /> Bem-vindo à TMHE
+                <Sparkles size={20} className="text-[#cfa855]" /> Bem-vindo ao TMHE
               </h2>
-              <p className="text-slate-500 text-sm leading-relaxed">
-                Um espaço de comunhão e suporte espiritual. Estamos prontos para o ouvir e orar consigo.
+              <p className="text-slate-500 text-sm leading-relaxed mb-4">
+                Um espaço de comunhão e suporte espiritual. Estamos prontos para o ouvir e orar contigo.
               </p>
             </div>
 
@@ -358,7 +389,7 @@ export default function App() {
                 <ChevronRight className="text-slate-300" />
               </button>
 
-              <button onClick={() => setView('testimonies')} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-[#cfa855]">
+              <button onClick={() => setView('testimonies')} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group">
                 <div className="flex items-center gap-4">
                   <div className="bg-amber-50 p-3 rounded-xl text-amber-600 group-hover:scale-110 transition-transform"><Quote size={24} /></div>
                   <div className="text-left">
@@ -370,81 +401,35 @@ export default function App() {
               </button>
             </div>
 
-            <div className="pt-10 flex justify-center">
-              <button onClick={() => setView('login')} className="flex items-center gap-2 text-slate-400 text-xs font-semibold hover:text-[#cfa855] transition-colors py-2 px-4 rounded-full bg-white shadow-sm border border-slate-100">
-                <Lock size={12} /> ÁREA ADMINISTRATIVA
-              </button>
+            <div className="bg-white p-4 rounded-3xl shadow-xl border border-slate-100 mt-6 overflow-hidden">
+               <h3 className="text-sm font-bold text-[#051c38] mb-3 flex items-center gap-2 uppercase tracking-widest px-2">
+                 <MapPin size={16} className="text-[#cfa855]" /> Localização
+               </h3>
+               <div className="rounded-2xl overflow-hidden border border-slate-50 h-[250px] w-full bg-slate-50 relative">
+                  <iframe 
+                    src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d266.352304462434!2d-43.33688119999806!3d-22.822559745632812!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e1!3m2!1spt-BR!2sbr!4v1766371878086!5m2!1spt-BR!2sbr" 
+                    width="100%" 
+                    height="100%" 
+                    style={{ border: 0 }} 
+                    allowFullScreen="" 
+                    loading="lazy" 
+                    referrerPolicy="no-referrer-when-downgrade"
+                  ></iframe>
+               </div>
+               <div className="mt-4 text-center">
+                  <a 
+                    href="https://maps.app.goo.gl/7qi7anN314nEYmVg7" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-[#cfa855] hover:underline flex items-center justify-center gap-2"
+                  >
+                    Clique aqui e chegue até nós <ExternalLink size={12} />
+                  </a>
+               </div>
             </div>
           </div>
         )}
 
-        {/* VIEW: TESTIMONIES LIST */}
-        {view === 'testimonies' && (
-          <div className="space-y-4 animate-fade-in pt-2">
-            <div className="flex items-center justify-between mb-4 px-2">
-              <h2 className="text-xl font-bold flex items-center gap-2 text-[#051c38]">
-                <Sparkles size={20} className="text-[#cfa855]" /> Testemunhos
-              </h2>
-              <button onClick={() => setView('add-testimony')} className="bg-[#cfa855] text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg shadow-gold/20 flex items-center gap-1">
-                <Plus size={14} /> Contar Vitória
-              </button>
-            </div>
-
-            {approvedTestimonies.length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
-                <Quote size={40} className="mx-auto text-slate-200 mb-2" />
-                <p className="text-slate-400 text-sm italic">Ainda não foram partilhados testemunhos. Seja o primeiro!</p>
-              </div>
-            ) : (
-              approvedTestimonies.map(t => (
-                <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 relative group transition-all hover:shadow-lg">
-                  <Quote size={30} className="absolute top-4 right-4 text-[#cfa855]/10 group-hover:text-[#cfa855]/20" />
-                  <p className="text-slate-700 leading-relaxed italic mb-4">"{t.message}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-[#cfa855]">
-                      <User size={16} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm text-[#051c38]">{t.isAnonymous ? 'Irmão(ã) Anónimo(a)' : t.name}</h4>
-                      <p className="text-[10px] text-slate-400 font-medium">Partilhado recentemente</p>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {/* VIEW: ADD TESTIMONY FORM */}
-        {view === 'add-testimony' && (
-          <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100">
-            <div className="flex items-center gap-2 mb-8">
-              <button onClick={() => setView('testimonies')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
-              <h2 className="text-xl font-bold text-[#051c38]">Contar a minha Vitória</h2>
-            </div>
-            <div className="space-y-5">
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <input type="checkbox" id="anon-t" checked={formData.isAnonymous} onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg" />
-                <label htmlFor="anon-t" className="text-sm font-bold text-slate-600 cursor-pointer">Enviar de forma anónima</label>
-              </div>
-              {!formData.isAnonymous && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">O Seu Nome</label>
-                  <input type="text" placeholder="Ex: João Silva" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] transition-all font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-                </div>
-              )}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">O Seu Testemunho</label>
-                <textarea placeholder="O que Deus fez na sua vida?" rows="6" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] transition-all font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
-              </div>
-              <button onClick={() => handleSubmitRequest('testimony')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl shadow-gold/20 hover:bg-[#b38f44] transition-all active:scale-95">
-                <Send size={18} /> Publicar Testemunho
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* VIEW: PRAYER FORM */}
         {view === 'prayer' && (
           <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100">
             <div className="flex items-center gap-2 mb-8">
@@ -457,63 +442,110 @@ export default function App() {
                 <label htmlFor="anon-p" className="text-sm font-bold text-slate-600 cursor-pointer">Enviar de forma anónima</label>
               </div>
               {!formData.isAnonymous && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Nome Completo</label>
-                  <input type="text" placeholder="Como deseja ser chamado?" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] transition-all font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-                </div>
+                <input type="text" placeholder="O seu nome completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               )}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Motivo</label>
-                <textarea placeholder="Partilhe o que vai no seu coração..." rows="5" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] transition-all font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
+              <div className="relative">
+                <textarea placeholder="Partilhe o que vai no seu coração..." rows="5" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
+                <button 
+                  onClick={handleGenerateComfort} 
+                  disabled={aiLoading}
+                  className="absolute bottom-4 right-4 bg-white/80 shadow-sm text-[#cfa855] p-2 rounded-xl flex items-center gap-2 text-[10px] font-bold hover:bg-white transition-all border border-slate-100"
+                >
+                  {aiLoading ? "..." : <Sparkles size={12} />} IA Conforto
+                </button>
               </div>
-              <button onClick={() => handleSubmitRequest('prayer')} className="w-full bg-[#051c38] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl shadow-navy/20 hover:bg-slate-900 transition-all active:scale-95">
-                <Heart fill="white" size={18} /> Enviar Pedido
+              {aiResponse && <div className="bg-[#051c38] text-white p-5 rounded-2xl text-sm italic border-l-4 border-[#cfa855] animate-fade-in">{aiResponse}</div>}
+              <button onClick={() => handleSubmitRequest('prayer')} className="w-full bg-[#051c38] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl hover:bg-slate-900 transition-all active:scale-95">
+                <Send size={18} /> Enviar Pedido
               </button>
             </div>
           </div>
         )}
 
-        {/* VIEW: VISIT FORM */}
-        {view === 'visit' && (
+        {view === 'testimonies' && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between mb-4 px-2">
+              <h2 className="text-xl font-bold text-[#051c38]">Vitórias</h2>
+              <button onClick={() => setView('add-testimony')} className="bg-[#cfa855] text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg flex items-center gap-1"><Plus size={14} /> Contar Vitória</button>
+            </div>
+            {approvedTestimonies.length === 0 ? (
+              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 italic text-sm">Ainda sem testemunhos.</div>
+            ) : (
+              approvedTestimonies.map(t => (
+                <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg">
+                  {t.title && <h4 className="font-black text-[#051c38] mb-1 uppercase text-[10px] tracking-widest">{safeRender(t.title)}</h4>}
+                  <p className="text-slate-700 italic text-sm leading-relaxed mb-4">"{safeRender(t.message)}"</p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-[#cfa855] font-bold text-xs uppercase">{t.name ? t.name[0] : 'A'}</div>
+                    <span className="font-bold text-xs text-slate-500">{t.isAnonymous ? 'Anónimo' : safeRender(t.name)}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {view === 'add-testimony' && (
           <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100">
             <div className="flex items-center gap-2 mb-8">
-              <button onClick={() => setView('home')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
-              <h2 className="text-xl font-bold text-[#051c38]">Solicitar Visita</h2>
+              <button onClick={() => setView('testimonies')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
+              <h2 className="text-xl font-bold text-[#051c38]">Novo Testemunho</h2>
             </div>
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Nome Completo</label>
-                <input type="text" placeholder="Nome para o contacto" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+            <div className="space-y-5">
+              <input type="text" placeholder="Título da Vitória (ou use a IA)" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
+              <div className="relative">
+                <textarea placeholder="O que Deus fez na sua vida?" rows="6" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
+                <button 
+                  onClick={handleGenerateTitle} 
+                  disabled={aiLoading}
+                  className="absolute bottom-4 right-4 bg-white/80 shadow-sm text-[#cfa855] p-2 rounded-xl flex items-center gap-2 text-[10px] font-bold hover:bg-white border border-slate-100"
+                >
+                  <Wand2 size={12} /> IA Título
+                </button>
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Telemóvel / WhatsApp</label>
-                <input type="tel" placeholder="Ex: 912 345 678" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.contact} onChange={(e) => setFormData({...formData, contact: e.target.value})} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Morada</label>
-                <input type="text" placeholder="Rua, número e localidade" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
-              </div>
-              <div className="space-y-2 py-2">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2"><Calendar size={14} /> Preferência de Dias</p>
-                <div className="flex flex-wrap gap-2">
-                  {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map(day => (
-                    <button key={day} onClick={() => {
-                      const days = formData.preferredDays.includes(day) ? formData.preferredDays.filter(d => d !== day) : [...formData.preferredDays, day];
-                      setFormData({...formData, preferredDays: days});
-                    }} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${formData.preferredDays.includes(day) ? 'bg-[#cfa855] text-white shadow-lg shadow-gold/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>{day}</button>
-                  ))}
-                </div>
-              </div>
-              <button onClick={() => handleSubmitRequest('visit')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl shadow-gold/20 hover:bg-[#b38f44] transition-all active:scale-95 mt-4">
-                <Calendar size={18} /> Agendar Visita
+              <button onClick={() => handleSubmitRequest('testimony')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all">
+                Publicar Testemunho
               </button>
             </div>
           </div>
         )}
 
-        {/* VIEW: LOGIN ADMIN */}
+        {view === 'admin' && isAdmin && (
+          <div className="space-y-5 animate-fade-in pb-12">
+            <div className="flex items-center justify-between bg-white p-5 rounded-3xl shadow-md">
+              <h2 className="font-bold text-sm text-[#051c38] uppercase tracking-wider">Gestão Pastoral</h2>
+              <button onClick={() => setView('home')} className="p-2 text-red-500"><X size={20} /></button>
+            </div>
+            <div className="space-y-4">
+              {filteredRequests.map(req => (
+                <div key={req.id} className="bg-white rounded-3xl p-6 border-l-8 border-[#cfa855] shadow-md relative group">
+                  <div className="absolute top-4 right-4 flex gap-2">
+                    <button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
+                  </div>
+                  <h4 className="font-black text-slate-800 text-sm mb-1">{req.isAnonymous ? 'Anónimo' : safeRender(req.name)}</h4>
+                  <p className="text-xs text-slate-500 mb-3 bg-slate-50 p-3 rounded-xl">"{safeRender(req.message)}"</p>
+                  
+                  <button 
+                    onClick={async () => {
+                      setAiLoading(true);
+                      const prompt = `Gera uma resposta pastoral curta e encorajadora para este pedido: "${req.message}". Português de Portugal.`;
+                      try {
+                        const res = await callGemini(prompt);
+                        notify(`Sugestão: ${res}`, 'success');
+                      } catch(e) { notify('Erro na IA.', 'error'); } finally { setAiLoading(false); }
+                    }}
+                    className="text-[10px] font-black text-[#cfa855] flex items-center gap-1 hover:underline"
+                  >
+                    <Sparkles size={10} /> Sugestão de Resposta IA
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {view === 'login' && (
-          <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-8 animate-fade-in">
+          <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-8 animate-fade-in mt-10">
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 border border-slate-100 shadow-inner"><Lock size={40} /></div>
             <div className="space-y-2">
               <h2 className="text-2xl font-bold text-[#051c38]">Área Restrita</h2>
@@ -521,132 +553,65 @@ export default function App() {
             </div>
             <input type="password" placeholder="••••" maxLength={4} className="text-center text-4xl tracking-[1em] w-full p-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] shadow-inner font-mono" value={adminPin} onChange={(e) => setAdminPin(e.target.value)} />
             <div className="flex gap-4">
-              <button onClick={() => setView('home')} className="flex-1 p-4 bg-slate-50 text-slate-500 rounded-2xl font-bold hover:bg-slate-100 transition-colors">Cancelar</button>
+              <button onClick={() => setView('home')} className="flex-1 p-4 bg-slate-50 text-slate-500 rounded-2xl font-bold hover:bg-slate-100 transition-colors">Voltar</button>
               <button onClick={checkAdmin} className="flex-1 p-4 bg-[#051c38] text-white rounded-2xl font-bold hover:bg-slate-900 shadow-lg shadow-navy/20 transition-all active:scale-95">Entrar</button>
             </div>
           </div>
         )}
 
-        {/* VIEW: ADMIN DASHBOARD */}
-        {view === 'admin' && isAdmin && (
-          <div className="space-y-5 animate-fade-in pb-12">
-            <div className="flex items-center justify-between bg-white p-5 rounded-3xl shadow-md border border-slate-50">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-[#051c38] text-[#cfa855] rounded-full flex items-center justify-center shadow-lg"><Lock size={20} /></div>
-                <div><h2 className="font-bold text-sm text-[#051c38]">Gestão Pastoral</h2><p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Monitorização</p></div>
-              </div>
-              <button onClick={() => { setIsAdmin(false); setView('home'); }} className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors"><X size={20} /></button>
+        {view === 'visit' && (
+          <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100">
+            <div className="flex items-center gap-2 mb-8">
+              <button onClick={() => setView('home')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
+              <h2 className="text-xl font-bold text-[#051c38]">Agendar Visita</h2>
             </div>
-
-            <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar px-1">
-              {[
-                {id: 'all', label: 'Todos', count: allRequests.length},
-                {id: 'prayer', label: 'Orações', count: allRequests.filter(r => r.type === 'prayer').length},
-                {id: 'visit', label: 'Visitas', count: allRequests.filter(r => r.type === 'visit').length},
-                {id: 'testimony', label: 'Testemunhos', count: allRequests.filter(r => r.type === 'testimony').length}
-              ].map(f => (
-                <button key={f.id} onClick={() => setFilterType(f.id)} className={`px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${filterType === f.id ? 'bg-[#cfa855] text-white border-transparent shadow-lg shadow-gold/30' : 'bg-white text-slate-500 border-slate-100'}`}>
-                  {f.label} <span className={`ml-1 opacity-60`}>({f.count})</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="space-y-4">
-              {filteredRequests.length === 0 ? (
-                <div className="text-center py-24 bg-white rounded-[2.5rem] border border-dashed border-slate-200">
-                  <Bell className="mx-auto text-slate-100 mb-4" size={56} />
-                  <p className="text-slate-400 font-medium italic">Sem novos pedidos nesta categoria.</p>
-                </div>
-              ) : (
-                filteredRequests.map(req => (
-                  <div key={req.id} className={`bg-white rounded-3xl border-l-8 shadow-md overflow-hidden transition-all group ${req.status === 'completed' ? 'border-green-400 opacity-60' : req.type === 'prayer' ? 'border-red-400' : req.type === 'visit' ? 'border-blue-400' : 'border-amber-400'}`}>
-                    <div className="p-6">
-                      <div className="flex justify-between items-start mb-4">
-                        <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full ${req.type === 'prayer' ? 'bg-red-50 text-red-600' : req.type === 'visit' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
-                          {req.type === 'prayer' ? 'Pedido Oração' : req.type === 'visit' ? 'Visita Pastoral' : 'Testemunho'}
-                        </span>
-                        <div className="flex gap-3 translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all">
-                          <button onClick={() => handleDelete(req.id)} className="p-2 bg-slate-50 text-slate-400 hover:text-red-500 rounded-lg shadow-sm transition-colors"><Trash2 size={16} /></button>
-                          {req.status === 'pending' && (
-                            <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="p-2 bg-green-50 text-green-600 rounded-lg shadow-sm hover:bg-green-100 transition-colors"><CheckCircle2 size={16} /></button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <h4 className="font-bold text-slate-800 text-lg flex items-center gap-2 uppercase tracking-tight">
-                          {req.isAnonymous ? 'Irmão(ã) Anónimo(a)' : req.name}
-                        </h4>
-                        
-                        {req.contact && (
-                          <div className="flex items-center gap-2 text-xs font-bold text-slate-400 bg-slate-50 w-fit px-3 py-1.5 rounded-lg">
-                            <Phone size={12} className="text-[#cfa855]" /> {req.contact}
-                          </div>
-                        )}
-
-                        <div className="bg-slate-50/50 p-4 rounded-2xl italic text-slate-600 text-sm leading-relaxed border border-slate-100">
-                          "{req.message}"
-                        </div>
-
-                        {req.type === 'visit' && (
-                          <div className="grid grid-cols-1 gap-2 pt-2 text-[11px] font-bold text-slate-400">
-                            <div className="flex items-start gap-2 text-[#051c38] bg-slate-50 p-3 rounded-xl border border-slate-100">
-                              <MapPin size={14} className="mt-0.5 text-[#cfa855] shrink-0" />
-                              <span className="leading-tight">{req.address}</span>
-                            </div>
-                            <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
-                              <span className="flex items-center gap-1"><Calendar size={14} className="text-[#cfa855]" /> {req.preferredDays?.join(', ')}</span>
-                              <span className="flex items-center gap-1 italic opacity-60 tracking-wider">Aguardando contacto</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="space-y-5">
+              <input type="text" placeholder="Nome Completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              <input type="tel" placeholder="Telemóvel / WhatsApp" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.contact} onChange={(e) => setFormData({...formData, contact: e.target.value})} />
+              <input type="text" placeholder="Morada completa" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+              <textarea placeholder="Motivo da visita..." rows="5" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
+              <button onClick={() => handleSubmitRequest('visit')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all">Solicitar Visita</button>
             </div>
           </div>
         )}
+
       </main>
 
-      {/* Navegação Inferior (Estilo Tab Bar) */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-100 px-6 py-4 flex justify-around items-center z-40 shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.1)]">
-        <button onClick={() => setView('home')} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'home' ? 'text-[#cfa855] scale-110' : 'text-slate-400 hover:text-slate-600'}`}>
-          <Home size={22} className={view === 'home' ? 'drop-shadow-sm' : ''} />
+        <button 
+          onClick={() => setView('home')} 
+          className={`flex flex-col items-center gap-1.5 transition-all ${view === 'home' ? 'text-[#cfa855] scale-110' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          <Home size={26} />
           <span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
         </button>
-        <button onClick={() => setView('prayer')} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'prayer' ? 'text-red-500 scale-110' : 'text-slate-400 hover:text-slate-600'}`}>
-          <Heart size={22} fill={view === 'prayer' ? "currentColor" : "none"} />
-          <span className="text-[9px] font-bold uppercase tracking-widest">Oração</span>
+
+        <button 
+          onClick={handleShare} 
+          className="flex flex-col items-center gap-1.5 transition-all text-slate-400 hover:text-[#cfa855] active:scale-110"
+        >
+          <div className="bg-[#cfa855]/10 p-2 rounded-xl text-[#cfa855]">
+            <Share2 size={26} />
+          </div>
+          <span className="text-[9px] font-bold uppercase tracking-widest">Partilhar</span>
         </button>
-        <button onClick={() => setView('testimonies')} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'testimonies' || view === 'add-testimony' ? 'text-amber-500 scale-110' : 'text-slate-400 hover:text-slate-600'}`}>
-          <Quote size={22} />
+
+        <button 
+          onClick={() => setView('testimonies')} 
+          className={`flex flex-col items-center gap-1.5 transition-all ${view === 'testimonies' || view === 'add-testimony' ? 'text-amber-500 scale-110' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          <Quote size={26} />
           <span className="text-[9px] font-bold uppercase tracking-widest">Vitórias</span>
         </button>
-        {isAdmin && (
-           <button onClick={() => setView('admin')} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'admin' ? 'text-[#051c38] scale-110' : 'text-slate-400 hover:text-slate-600'}`}>
-             <div className="relative">
-               <Lock size={22} />
-               {allRequests.filter(r => r.status === 'pending').length > 0 && (
-                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
-               )}
-             </div>
-             <span className="text-[9px] font-bold uppercase tracking-widest">Admin</span>
-           </button>
-        )}
       </nav>
 
-      {/* Estilos Animados Globais */}
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes fade-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes slide-up { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes bounce-in { 0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.05); } 70% { transform: scale(0.9); } 100% { transform: scale(1); opacity: 1; } }
-        .animate-fade-in { animation: fade-in 0.4s ease-out; }
-        .animate-slide-up { animation: slide-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1); }
-        .animate-bounce-in { animation: bounce-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slide-up { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes bounce-in { 0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+        .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
+        .animate-slide-up { animation: slide-up 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.1); }
+        .animate-bounce-in { animation: bounce-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
       `}} />
     </div>
   );
