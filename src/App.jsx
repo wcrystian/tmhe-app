@@ -206,7 +206,7 @@ const ScheduleModal = ({ isOpen, onClose }) => {
         
         <div className="p-6 bg-slate-50 border-t border-slate-100">
           <p className="text-[10px] text-slate-400 text-center italic font-medium">
-            "Alegrei-me quando me disseram: Vamos à casa do Senhor."
+            "Alegrei-me quando me disseram: Vamos à casa do Senhor." (Salmos 122:1)
           </p>
         </div>
       </div>
@@ -352,8 +352,8 @@ export default function App() {
     if (!formData.message) return notify('Escreva primeiro o seu pedido.', 'error');
     setAiLoading(true);
     setAiResponse('');
-    const prompt = `O utilizador fez o seguinte pedido de oração: "${formData.message}". Escreve uma breve mensagem de conforto bíblico (máximo 3 frases) em Português de Portugal. Inclui um versículo bíblico curto e inspirador.`;
-    const systemPrompt = "És um assistente pastoral do Templo Missionário Há Esperança. O teu objetivo é trazer esperança e conforto bíblico.";
+    const prompt = `O utilizador fez o seguinte pedido de oração: "${formData.message}". Escreve uma breve mensagem de conforto bíblico (máximo 3 frases) em Português de Portugal. Inclui um versículo bíblico curto e inspirador, obrigatoriamente com a respetiva referência (Livro, Capítulo e Versículo).`;
+    const systemPrompt = "És um assistente pastoral do Templo Missionário Há Esperança. O teu objetivo é trazer esperança e conforto bíblico fundamentado nas Escrituras.";
     try {
       const response = await callGemini(prompt, systemPrompt);
       setAiResponse(response);
