@@ -3,8 +3,8 @@ import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
   signInAnonymously, 
-  onAuthStateChanged,
-  signInWithCustomToken
+  onAuthStateChanged, 
+  signInWithCustomToken 
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -13,9 +13,9 @@ import {
   onSnapshot, 
   doc, 
   updateDoc, 
-  deleteDoc,
-  query,
-  serverTimestamp
+  deleteDoc, 
+  query, 
+  serverTimestamp 
 } from 'firebase/firestore';
 import { 
   Heart, 
@@ -23,26 +23,27 @@ import {
   Plus, 
   User, 
   CheckCircle2, 
-  MessageCircle,
-  X,
-  Phone,
-  Home,
-  Calendar,
-  MapPin,
-  Clock,
-  BookOpen,
-  Lock,
-  ChevronRight,
-  Filter,
-  Trash2,
-  Bell,
-  AlertTriangle,
-  ExternalLink,
-  Quote,
-  Sparkles,
-  Wand2,
-  Share2,
-  CalendarCheck
+  MessageCircle, 
+  X, 
+  Phone, 
+  Home, 
+  Calendar, 
+  MapPin, 
+  Clock, 
+  BookOpen, 
+  Lock, 
+  ChevronRight, 
+  Filter, 
+  Trash2, 
+  Bell, 
+  AlertTriangle, 
+  ExternalLink, 
+  Quote, 
+  Sparkles, 
+  Wand2, 
+  Share2, 
+  CalendarCheck,
+  Info
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO E SEGURANÇA ---
@@ -148,6 +149,71 @@ const Notification = ({ message, type, onClose }) => {
   );
 };
 
+const ScheduleModal = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  const schedules = [
+    { day: 'Domingo', events: [
+      { name: 'Escola Bíblica Dominical', time: '10:00 - 11:30' },
+      { name: 'Culto de Adoração', time: '19:00 - 21:00' }
+    ]},
+    { day: 'Quarta-feira', events: [
+      { name: 'Culto de Consagração', time: '19:00 - 21:00' }
+    ]},
+    { day: 'Sexta-feira', events: [
+      { name: 'Culto de Libertação', time: '19:00 - 21:00' }
+    ]}
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm transition-opacity">
+      <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden animate-bounce-in border border-slate-100">
+        <div className="bg-[#051c38] p-6 text-white flex justify-between items-center border-b border-[#cfa855]/30">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-[#cfa855] rounded-xl">
+              <Calendar size={20} className="text-[#051c38]" />
+            </div>
+            <h3 className="font-bold text-lg tracking-tight">Horários de Cultos</h3>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/70">
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar">
+          {schedules.map((item, idx) => (
+            <div key={idx} className="space-y-3">
+              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#cfa855] flex items-center gap-2">
+                <span className="w-1 h-3 bg-[#cfa855] rounded-full"></span>
+                {item.day}
+              </h4>
+              <div className="space-y-2">
+                {item.events.map((event, eIdx) => (
+                  <div key={eIdx} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between group hover:border-[#cfa855]/30 transition-all">
+                    <div className="flex flex-col flex-1 mr-2">
+                      <span className="text-sm font-bold text-slate-800 leading-tight">{event.name}</span>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-2 text-[#cfa855] font-bold text-xs bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm whitespace-nowrap">
+                      <Clock size={12} />
+                      {event.time}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="p-6 bg-slate-50 border-t border-slate-100">
+          <p className="text-[10px] text-slate-400 text-center italic font-medium">
+            "Alegrei-me quando me disseram: Vamos à casa do Senhor."
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- COMPONENTE PRINCIPAL ---
 
 export default function App() {
@@ -158,6 +224,7 @@ export default function App() {
   const [notification, setNotification] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
+  const [showSchedule, setShowSchedule] = useState(false);
   
   const isConfigPlaceholder = firebaseConfig.apiKey === "SUA_API_KEY_AQUI";
   const [configMissing, setConfigMissing] = useState(isConfigPlaceholder);
@@ -389,6 +456,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#f1f5f9] pb-24 font-sans text-slate-800 selection:bg-[#cfa855]/30">
       {notification && <Notification message={notification.msg} type={notification.type} onClose={() => setNotification(null)} />}
+      
+      <ScheduleModal isOpen={showSchedule} onClose={() => setShowSchedule(false)} />
 
       <header className="bg-[#051c38] text-white shadow-2xl rounded-b-[2.5rem] sticky top-0 z-30 border-b border-[#cfa855]/20 relative">
         <div className="absolute top-6 right-6 z-40">
@@ -451,7 +520,23 @@ export default function App() {
               </button>
             </div>
 
-            <div className="bg-white p-4 rounded-3xl shadow-xl border border-slate-100 mt-6 overflow-hidden">
+            {/* Botão de Horários movido para acima da localização */}
+            <button 
+              onClick={() => setShowSchedule(true)}
+              className="w-full bg-[#051c38] p-5 rounded-2xl shadow-lg border border-[#cfa855]/30 flex items-center justify-between group overflow-hidden relative mt-6"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="bg-[#cfa855] p-3 rounded-xl text-[#051c38]"><Calendar size={24} /></div>
+                <div className="text-left text-white">
+                  <h3 className="font-bold">Horários de Culto</h3>
+                  <p className="text-[10px] opacity-70 uppercase font-semibold tracking-wider">Saiba quando nos visitar</p>
+                </div>
+              </div>
+              <Info className="text-[#cfa855] relative z-10" size={20} />
+            </button>
+
+            <div className="bg-white p-4 rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
                <h3 className="text-sm font-bold text-[#051c38] mb-3 flex items-center gap-2 uppercase tracking-widest px-2">
                  <MapPin size={16} className="text-[#cfa855]" /> Localização
                </h3>
