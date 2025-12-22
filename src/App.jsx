@@ -219,26 +219,48 @@ export default function App() {
 
   const notify = (msg, type = 'success') => setNotification({ msg, type });
 
+  // Lógica de partilha REDESENHADA para ser infalível
   const handleShare = async () => {
+    const url = window.location.href;
     const shareData = {
       title: 'Templo Missionário Há Esperança',
       text: 'Olá! Conheça o aplicativo do TMHE para pedidos de oração, visitas e testemunhos.',
-      url: window.location.href
+      url: url
     };
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        const textArea = document.createElement("textarea");
-        textArea.value = shareData.url;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        notify('Link copiado para a área de transferência!');
+
+    // Função interna para copiar link (fallback)
+    const copyToClipboard = async () => {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(url);
+        } else {
+          const textArea = document.createElement("textarea");
+          textArea.value = url;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+        }
+        notify('Link copiado! Já o pode colar no WhatsApp ou redes sociais.', 'success');
+      } catch (e) {
+        notify('Não foi possível copiar o link automaticamente.', 'error');
       }
-    } catch (err) {
-      console.log('Erro ao partilhar:', err);
+    };
+
+    // Se estivermos num telemóvel e o navegador suportar partilha
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // Se o utilizador cancelou, não fazemos nada. 
+        // Se deu erro (como fechar sozinho), tentamos o copiar.
+        if (err.name !== 'AbortError') {
+          await copyToClipboard();
+        }
+      }
+    } else {
+      // Se for computador ou navegador antigo, apenas copia o link
+      await copyToClipboard();
     }
   };
 
@@ -586,6 +608,7 @@ export default function App() {
           <span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
         </button>
 
+        {/* Botão central agora é Partilhar (com a lógica defensiva) */}
         <button 
           onClick={handleShare} 
           className="flex flex-col items-center gap-1.5 transition-all text-slate-400 hover:text-[#cfa855] active:scale-110"
