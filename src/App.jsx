@@ -15,7 +15,8 @@ import {
   updateDoc, 
   deleteDoc, 
   query, 
-  serverTimestamp 
+  serverTimestamp,
+  increment
 } from 'firebase/firestore';
 import { 
   Heart, 
@@ -43,7 +44,8 @@ import {
   Wand2, 
   Share2, 
   CalendarCheck,
-  Info
+  Info,
+  ThumbsUp
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO E SEGURANÇA ---
@@ -364,18 +366,14 @@ export default function App() {
     }
   };
 
-  const handleGenerateTitle = async () => {
-    if (!formData.message) return notify('Escreva o testemunho primeiro.', 'error');
-    setAiLoading(true);
-    const prompt = `Gera um título inspirador e curto (máximo 5 palavras) para este testemunho: "${formData.message}". Usa Português de Portugal.`;
+  const handleLike = async (id) => {
     try {
-      const response = await callGemini(prompt);
-      setFormData(prev => ({ ...prev, title: response.replace(/"/g, '') }));
-      notify('✨ Título sugerido com sucesso!');
+      const testimonyRef = doc(db, 'artifacts', appId, 'public', 'data', 'requests', id);
+      await updateDoc(testimonyRef, {
+        likes: increment(1)
+      });
     } catch (err) {
-      notify('Erro ao gerar título.', 'error');
-    } finally {
-      setAiLoading(false);
+      console.error("Erro ao curtir:", err);
     }
   };
 
@@ -384,14 +382,18 @@ export default function App() {
     if (type === 'visit' && (!formData.name || !formData.contact || !formData.address)) {
       return notify('Por favor, preencha nome, whatsapp e endereço.', 'error');
     }
+    if (type === 'testimony' && (!formData.name || !formData.title || !formData.message)) {
+      return notify('Preencha o seu nome, título e o seu testemunho.', 'error');
+    }
     
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'requests'), {
         ...formData,
         type,
-        status: 'pending', // Todos começam como pendente
+        status: 'pending', 
         createdAt: serverTimestamp(),
-        userId: user.uid
+        userId: user.uid,
+        likes: 0
       });
 
       const successMsg = type === 'visit' 
@@ -443,7 +445,6 @@ export default function App() {
   }, [allRequests, filterType]);
 
   const approvedTestimonies = useMemo(() => {
-    // Para testemunhos, mostramos todos que não foram deletados
     return allRequests.filter(r => r.type === 'testimony');
   }, [allRequests]);
 
@@ -520,7 +521,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* Botão de Horários movido para acima da localização */}
             <button 
               onClick={() => setShowSchedule(true)}
               className="w-full bg-[#051c38] p-5 rounded-2xl shadow-lg border border-[#cfa855]/30 flex items-center justify-between group overflow-hidden relative mt-6"
@@ -598,21 +598,39 @@ export default function App() {
         )}
 
         {view === 'testimonies' && (
-          <div className="space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between mb-4 px-2">
-              <h2 className="text-xl font-bold text-[#051c38]">Vitórias</h2>
-              <button onClick={() => setView('add-testimony')} className="bg-[#cfa855] text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg flex items-center gap-1"><Plus size={14} /> Contar Vitória</button>
+          <div className="space-y-4 animate-fade-in pb-12">
+            <div className="flex items-center justify-between mb-6 px-2">
+              <h2 className="text-2xl font-bold text-[#051c38]">Vitórias</h2>
+              <button onClick={() => setView('add-testimony')} className="bg-[#cfa855] text-white px-5 py-2.5 rounded-full text-xs font-black shadow-lg flex items-center gap-2 uppercase tracking-widest active:scale-95 transition-all">
+                <Plus size={16} /> Contar Vitória
+              </button>
             </div>
             {approvedTestimonies.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 italic text-sm">Ainda sem testemunhos.</div>
             ) : (
               approvedTestimonies.map(t => (
-                <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg">
-                  {t.title && <h4 className="font-black text-[#051c38] mb-1 uppercase text-[10px] tracking-widest">{safeRender(t.title)}</h4>}
-                  <p className="text-slate-700 italic text-sm leading-relaxed mb-4">"{safeRender(t.message)}"</p>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-[#cfa855] font-bold text-xs uppercase">{t.name ? t.name[0] : 'A'}</div>
-                    <span className="font-bold text-xs text-slate-500">{t.isAnonymous ? 'Anónimo' : safeRender(t.name)}</span>
+                <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative group">
+                  <div className="flex justify-between items-start mb-2">
+                    {t.title && <h4 className="font-black text-[#051c38] uppercase text-xs tracking-widest flex-1 pr-12">{safeRender(t.title)}</h4>}
+                    <button 
+                      onClick={() => handleLike(t.id)}
+                      className="flex flex-col items-center gap-1 group/like transition-all active:scale-125"
+                    >
+                      <div className="p-2 bg-pink-50 rounded-full text-pink-500 group-hover/like:bg-pink-100 transition-colors">
+                        <Heart size={16} fill={t.likes > 0 ? "currentColor" : "none"} />
+                      </div>
+                      <span className="text-[10px] font-black text-pink-500">{t.likes || 0}</span>
+                    </button>
+                  </div>
+                  <p className="text-slate-700 italic text-sm leading-relaxed mb-6">"{safeRender(t.message)}"</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-[#051c38] text-white rounded-full flex items-center justify-center font-black text-[10px] uppercase shadow-sm">
+                      {t.name ? t.name[0] : 'A'}
+                    </div>
+                    <div>
+                      <span className="font-black text-[10px] text-slate-500 uppercase tracking-widest block">{t.isAnonymous ? 'Anónimo' : safeRender(t.name)}</span>
+                      <span className="text-[8px] text-slate-300 font-bold uppercase tracking-tighter">Testemunho de Fé</span>
+                    </div>
                   </div>
                 </div>
               ))
@@ -621,24 +639,49 @@ export default function App() {
         )}
 
         {view === 'add-testimony' && (
-          <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100">
+          <div className="bg-white p-8 rounded-3xl shadow-2xl animate-slide-up border border-slate-100">
             <div className="flex items-center gap-2 mb-8">
-              <button onClick={() => setView('testimonies')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
-              <h2 className="text-xl font-bold text-[#051c38]">Novo Testemunho</h2>
+              <button onClick={() => setView('testimonies')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><X size={20} /></button>
+              <h2 className="text-xl font-black text-[#051c38] uppercase tracking-tighter">Partilhar Vitória</h2>
             </div>
             <div className="space-y-5">
-              <input type="text" placeholder="Título da Vitória (ou use a IA)" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
-              <div className="relative">
-                <textarea placeholder="O que Deus fez na sua vida?" rows="6" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
-                <button 
-                  onClick={handleGenerateTitle} 
-                  disabled={aiLoading}
-                  className="absolute bottom-4 right-4 bg-white/80 shadow-sm text-[#cfa855] p-2 rounded-xl flex items-center gap-2 text-[10px] font-bold hover:bg-white border border-slate-100"
-                >
-                  <Wand2 size={12} /> IA Título
-                </button>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Seu Nome</label>
+                <input 
+                  type="text" 
+                  placeholder="Como se chama?" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" 
+                  value={formData.name} 
+                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                />
               </div>
-              <button onClick={() => handleSubmitRequest('testimony')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all">
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Título da Vitória</label>
+                <input 
+                  type="text" 
+                  placeholder="Ex: Cura de enfermidade" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" 
+                  value={formData.title} 
+                  onChange={(e) => setFormData({...formData, title: e.target.value})} 
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">O que Deus fez na sua vida?</label>
+                <textarea 
+                  placeholder="Conte-nos o seu testemunho..." 
+                  rows="6" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" 
+                  value={formData.message} 
+                  onChange={(e) => setFormData({...formData, message: e.target.value})}
+                ></textarea>
+              </div>
+
+              <button 
+                onClick={() => handleSubmitRequest('testimony')} 
+                className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all mt-4"
+              >
                 Publicar Testemunho
               </button>
             </div>
@@ -652,7 +695,6 @@ export default function App() {
               <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"><X size={20} /></button>
             </div>
 
-            {/* Filtro de Categorias */}
             <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
               {['all', 'prayer', 'visit', 'testimony'].map(cat => (
                 <button 
@@ -669,7 +711,6 @@ export default function App() {
 
             <div className="space-y-4">
               {filteredRequests.map(req => {
-                // Lógica de Cores solicitada
                 let borderClass = 'border-slate-200';
                 let statusLabel = 'Pendente';
                 let statusBg = 'bg-slate-100 text-slate-500';
@@ -689,7 +730,6 @@ export default function App() {
                     statusBg = 'bg-green-50 text-green-700';
                   }
                 } else {
-                  // Para orações e testemunhos
                   if (req.status === 'completed') {
                     borderClass = 'border-green-400 opacity-60';
                     statusLabel = 'Concluído';
@@ -753,9 +793,13 @@ export default function App() {
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-4">
                       <p className="text-[9px] uppercase font-bold text-slate-400 mb-2">Observações / Mensagem</p>
                       <p className="text-sm text-slate-600 italic leading-relaxed">"{safeRender(req.message)}"</p>
+                      {req.type === 'testimony' && (
+                        <div className="mt-2 pt-2 border-t border-slate-200/50 flex items-center gap-1 text-[9px] font-black text-pink-400 uppercase">
+                          <Heart size={10} /> {req.likes || 0} Curtidas
+                        </div>
+                      )}
                     </div>
 
-                    {/* Ações de Status */}
                     <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-50">
                       {req.type === 'visit' ? (
                         <>
