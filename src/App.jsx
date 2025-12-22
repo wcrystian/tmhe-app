@@ -44,8 +44,7 @@ import {
   Wand2, 
   Share2, 
   CalendarCheck,
-  Info,
-  ThumbsUp
+  Info
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO E SEGURANÇA ---
@@ -86,21 +85,29 @@ const appId = rawAppId.replace(/\//g, '_');
 
 // --- COMPONENTES AUXILIARES ---
 
-const Logo = () => (
-  <div className="flex flex-col items-center justify-center py-6">
-    <div className="relative flex items-center justify-center w-44 h-44 mb-2">
+const Logo = ({ isScrolled }) => (
+  <div className={`flex flex-col items-center justify-center transition-all duration-500 ease-in-out ${isScrolled ? 'py-2' : 'py-4'}`}>
+    {/* A imagem desaparece completamente ao rolar */}
+    <div className={`relative flex items-center justify-center transition-all duration-500 overflow-hidden ${isScrolled ? 'h-0 opacity-0 mb-0' : 'h-24 w-24 mb-2 opacity-100'}`}>
       <div className="absolute inset-0 border-2 border-[#cfa855] rounded-full animate-pulse"></div>
       <img
         src="/logo.png"
         alt="TMHE Logo"
-        className="z-10 w-32 h-32 object-contain"
+        className="z-10 w-20 h-20 object-contain"
         onError={(e) => {
           e.target.src = "https://via.placeholder.com/150?text=TMHE";
         }}
       />
     </div>
-    <h1 className="text-2xl font-bold tracking-wider text-[#051c38]">TMHE</h1>
-    <p className="text-xs uppercase tracking-[0.2em] text-[#cfa855] font-medium text-center px-4">Templo Missionário Há Esperança</p>
+    
+    <div className="text-center transition-all duration-300">
+      <h1 className={`font-bold tracking-wider text-white leading-tight transition-all duration-300 ${isScrolled ? 'text-lg' : 'text-2xl'}`}>
+        TMHE
+      </h1>
+      <p className={`uppercase tracking-[0.15em] text-[#cfa855] font-semibold transition-all duration-300 ${isScrolled ? 'text-[8px]' : 'text-[10px]'}`}>
+        Templo Missionário Há Esperança
+      </p>
+    </div>
   </div>
 );
 
@@ -194,6 +201,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState(null);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   
   const isConfigPlaceholder = firebaseConfig.apiKey === "SUA_API_KEY_AQUI";
   const [configMissing, setConfigMissing] = useState(isConfigPlaceholder);
@@ -213,6 +221,20 @@ export default function App() {
     title: '',
     wantContact: false
   });
+
+  // Listener de Scroll para encolher o Header
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 40) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     if (configMissing) {
@@ -255,7 +277,6 @@ export default function App() {
 
   const notify = (msg, type = 'success') => setNotification({ msg, type });
 
-  // Máscara para WhatsApp: (21) 98765-4321
   const handleWhatsAppFormat = (value) => {
     let v = value.replace(/\D/g, "");
     if (v.length > 11) v = v.slice(0, 11);
@@ -337,18 +358,9 @@ export default function App() {
 
   const handleSubmitRequest = async (type) => {
     if (!formData.message && type !== 'visit') return notify('Escreva a sua mensagem.', 'error');
-    
-    if (type === 'visit' && (!formData.name || !formData.contact || !formData.address)) {
-      return notify('Por favor, preencha nome, whatsapp e endereço.', 'error');
-    }
-    
-    if (type === 'testimony' && (!formData.name || !formData.title || !formData.message)) {
-      return notify('Preencha o seu nome, título e o seu testemunho.', 'error');
-    }
-
-    if (type === 'prayer' && formData.wantContact && !formData.contact) {
-      return notify('Por favor, informe o seu WhatsApp para contato.', 'error');
-    }
+    if (type === 'visit' && (!formData.name || !formData.contact || !formData.address)) return notify('Preencha nome, whatsapp e endereço.', 'error');
+    if (type === 'testimony' && (!formData.name || !formData.title || !formData.message)) return notify('Preencha nome, título e testemunho.', 'error');
+    if (type === 'prayer' && formData.wantContact && !formData.contact) return notify('Informe o seu WhatsApp para contato.', 'error');
     
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'requests'), {
@@ -367,6 +379,7 @@ export default function App() {
       notify(successMsg);
       setFormData({ name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false, title: '', wantContact: false });
       setView(type === 'testimony' ? 'testimonies' : 'home');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       notify('Erro ao enviar.', 'error');
     }
@@ -375,7 +388,7 @@ export default function App() {
   const handleUpdateStatus = async (id, newStatus) => {
     try {
       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', id), { status: newStatus });
-      notify('Estado atualizado com sucesso.');
+      notify('Estado atualizado.');
     } catch (err) { notify('Erro ao atualizar.', 'error'); }
   };
 
@@ -392,24 +405,20 @@ export default function App() {
       setIsAdmin(true);
       setView('admin');
       setAdminPin('');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else { notify('PIN Incorreto', 'error'); }
   };
 
   const safeRender = (val) => {
     if (val === null || val === undefined) return "";
     if (Array.isArray(val)) return val.join(", ");
-    if (typeof val === 'string' || typeof val === 'number') return val;
-    return JSON.stringify(val);
+    return String(val);
   };
 
   const filteredRequests = useMemo(() => {
     if (filterType === 'all') return allRequests;
     return allRequests.filter(r => r.type === filterType);
   }, [allRequests, filterType]);
-
-  const approvedTestimonies = useMemo(() => {
-    return allRequests.filter(r => r.type === 'testimony');
-  }, [allRequests]);
 
   if (loading) return (
     <div className="flex items-center justify-center h-screen bg-[#f1f5f9]">
@@ -418,39 +427,40 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] pb-24 font-sans text-slate-800 selection:bg-[#cfa855]/30">
+    <div className="min-h-screen bg-[#f1f5f9] font-sans text-slate-800 selection:bg-[#cfa855]/30">
       {notification && <Notification message={notification.msg} type={notification.type} onClose={() => setNotification(null)} />}
       
       <ScheduleModal isOpen={showSchedule} onClose={() => setShowSchedule(false)} />
 
-      <header className="bg-[#051c38] text-white shadow-2xl rounded-b-[2.5rem] sticky top-0 z-30 border-b border-[#cfa855]/20 relative">
-        <div className="absolute top-6 right-6 z-40">
+      {/* HEADER ADAPTATIVO: Encolhe ao rolar */}
+      <header className={`bg-[#051c38] text-white shadow-2xl rounded-b-[2rem] sticky top-0 z-30 border-b border-[#cfa855]/20 transition-all duration-500 ease-in-out ${isScrolled ? 'pb-2' : 'pb-6'}`}>
+        <div className="absolute top-4 right-4 z-40">
            <button 
              onClick={() => setView('login')} 
-             className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white/70 transition-all border border-white/5"
+             className={`bg-white/10 hover:bg-white/20 rounded-full text-white/70 transition-all border border-white/5 ${isScrolled ? 'p-1.5' : 'p-2'}`}
            >
-             <Lock size={18} />
+             <Lock size={isScrolled ? 14 : 18} />
            </button>
         </div>
-        <Logo />
+        <Logo isScrolled={isScrolled} />
       </header>
 
-      <main className="max-w-md mx-auto px-4 mt-8">
+      <main className="max-w-md mx-auto px-4 mt-6 pb-32">
         
         {view === 'home' && (
           <div className="space-y-4 animate-fade-in">
             <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-[#cfa855]/5 rounded-bl-full -mr-8 -mt-8 transition-all group-hover:scale-110"></div>
               <h2 className="text-xl font-bold text-[#051c38] mb-2 flex items-center gap-2">
-                <Sparkles size={20} className="text-[#cfa855]" /> Bem-vindo ao TMHE
+                <Sparkles size={20} className="text-[#cfa855]" /> Bem-vindo
               </h2>
-              <p className="text-slate-500 text-sm leading-relaxed mb-4">
-                Um espaço de comunhão e suporte espiritual. Estamos prontos para o ouvir e orar contigo.
+              <p className="text-slate-500 text-sm leading-relaxed">
+                Estamos prontos para o ouvir e orar contigo. Escolha uma das opções abaixo:
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-3">
-              <button onClick={() => setView('prayer')} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group">
+              <button onClick={() => { setView('prayer'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group">
                 <div className="flex items-center gap-4">
                   <div className="bg-red-50 p-3 rounded-xl text-red-500 group-hover:scale-110 transition-transform"><Heart fill="currentColor" size={24} /></div>
                   <div className="text-left">
@@ -461,7 +471,7 @@ export default function App() {
                 <ChevronRight className="text-slate-300" />
               </button>
 
-              <button onClick={() => setView('visit')} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group">
+              <button onClick={() => { setView('visit'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group">
                 <div className="flex items-center gap-4">
                   <div className="bg-blue-50 p-3 rounded-xl text-blue-500 group-hover:scale-110 transition-transform"><Home size={24} /></div>
                   <div className="text-left">
@@ -472,7 +482,7 @@ export default function App() {
                 <ChevronRight className="text-slate-300" />
               </button>
 
-              <button onClick={() => setView('testimonies')} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group">
+              <button onClick={() => { setView('testimonies'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group">
                 <div className="flex items-center gap-4">
                   <div className="bg-amber-50 p-3 rounded-xl text-amber-600 group-hover:scale-110 transition-transform"><Quote size={24} /></div>
                   <div className="text-left">
@@ -503,25 +513,15 @@ export default function App() {
                <h3 className="text-sm font-bold text-[#051c38] mb-3 flex items-center gap-2 uppercase tracking-widest px-2">
                  <MapPin size={16} className="text-[#cfa855]" /> Localização
                </h3>
-               <div className="rounded-2xl overflow-hidden border border-slate-50 h-[250px] w-full bg-slate-50 relative">
+               <div className="rounded-2xl overflow-hidden border border-slate-50 h-[220px] w-full bg-slate-50 relative">
                   <iframe 
                     src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d266.352304462434!2d-43.33688119999806!3d-22.822559745632812!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e1!3m2!1spt-BR!2sbr!4v1766371878086!5m2!1spt-BR!2sbr" 
-                    width="100%" 
-                    height="100%" 
-                    style={{ border: 0 }} 
-                    allowFullScreen="" 
-                    loading="lazy" 
-                    referrerPolicy="no-referrer-when-downgrade"
+                    width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" loading="lazy" referrerPolicy="no-referrer-when-downgrade"
                   ></iframe>
                </div>
-               <div className="mt-4 text-center">
-                  <a 
-                    href="https://maps.app.goo.gl/7qi7anN314nEYmVg7" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-xs font-bold text-[#cfa855] hover:underline flex items-center justify-center gap-2"
-                  >
-                    Clique aqui e chegue até nós <ExternalLink size={12} />
+               <div className="mt-4 text-center pb-2">
+                  <a href="https://maps.app.goo.gl/7qi7anN314nEYmVg7" target="_blank" rel="noopener noreferrer" className="text-[10px] font-black text-[#cfa855] hover:underline flex items-center justify-center gap-2 uppercase tracking-tighter">
+                    Clique aqui e chegue até nós <ExternalLink size={10} />
                   </a>
                </div>
             </div>
@@ -536,68 +536,36 @@ export default function App() {
             </div>
             <div className="space-y-5">
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <input 
-                  type="checkbox" 
-                  id="anon-p" 
-                  checked={formData.isAnonymous} 
-                  onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})} 
-                  className="w-5 h-5 accent-[#cfa855] rounded-lg" 
-                />
+                <input type="checkbox" id="anon-p" checked={formData.isAnonymous} onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg" />
                 <label htmlFor="anon-p" className="text-sm font-bold text-slate-600 cursor-pointer">Enviar de forma Anônima</label>
               </div>
 
               {!formData.isAnonymous && (
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Seu Nome</label>
-                  <input 
-                    type="text" 
-                    placeholder="O seu nome completo" 
-                    className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
-                    value={formData.name} 
-                    onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                  />
+                  <input type="text" placeholder="Seu nome completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
                 </div>
               )}
 
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Pedido</label>
-                <textarea 
-                  placeholder="Partilhe o que vai no seu coração..." 
-                  rows="5" 
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" 
-                  value={formData.message} 
-                  onChange={(e) => setFormData({...formData, message: e.target.value})}
-                ></textarea>
+                <textarea placeholder="O que vai no seu coração?" rows="5" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
               </div>
 
-              {/* Opção de Contato */}
               <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
                 <div className="flex items-center gap-3">
-                  <input 
-                    type="checkbox" 
-                    id="want-contact" 
-                    checked={formData.wantContact} 
-                    onChange={(e) => setFormData({...formData, wantContact: e.target.checked})} 
-                    className="w-5 h-5 accent-[#cfa855] rounded-lg shrink-0" 
-                  />
+                  <input type="checkbox" id="want-contact" checked={formData.wantContact} onChange={(e) => setFormData({...formData, wantContact: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg shrink-0" />
                   <label htmlFor="want-contact" className="text-sm font-bold text-slate-600 cursor-pointer">Gostaria que a igreja entre em contato?</label>
                 </div>
-                
                 {formData.wantContact && (
                   <div className="animate-fade-in pt-1">
                     <label className="text-[10px] font-bold text-[#cfa855] uppercase ml-1 tracking-widest block mb-1">Seu WhatsApp</label>
-                    <input 
-                      type="tel" 
-                      placeholder="(21) 98765-4321" 
-                      className="w-full p-4 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#cfa855] font-bold" 
-                      value={formData.contact} 
-                      onChange={handleWhatsAppChange} 
-                    />
+                    <input type="tel" placeholder="(21) 98765-4321" className="w-full p-4 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.contact} onChange={handleWhatsAppChange} />
                   </div>
                 )}
               </div>
 
-              <button onClick={() => handleSubmitRequest('prayer')} className="w-full bg-[#051c38] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl hover:bg-slate-900 transition-all active:scale-95">
+              <button onClick={() => handleSubmitRequest('prayer')} className="w-full bg-[#051c38] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all">
                 <Send size={18} /> Enviar Pedido
               </button>
             </div>
@@ -605,25 +573,22 @@ export default function App() {
         )}
 
         {view === 'testimonies' && (
-          <div className="space-y-4 animate-fade-in pb-12">
+          <div className="space-y-4 animate-fade-in">
             <div className="flex items-center justify-between mb-6 px-2">
               <h2 className="text-2xl font-bold text-[#051c38]">Vitórias</h2>
-              <button onClick={() => setView('add-testimony')} className="bg-[#cfa855] text-white px-5 py-2.5 rounded-full text-xs font-black shadow-lg flex items-center gap-2 uppercase tracking-widest active:scale-95 transition-all">
+              <button onClick={() => { setView('add-testimony'); window.scrollTo(0,0); }} className="bg-[#cfa855] text-white px-5 py-2.5 rounded-full text-xs font-black shadow-lg flex items-center gap-2 uppercase tracking-widest active:scale-95 transition-all">
                 <Plus size={16} /> Contar Vitória
               </button>
             </div>
-            {approvedTestimonies.length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 italic text-sm">Ainda sem testemunhos.</div>
+            {allRequests.filter(r => r.type === 'testimony').length === 0 ? (
+              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-300 italic text-sm">Ainda sem testemunhos.</div>
             ) : (
-              approvedTestimonies.map(t => (
-                <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative group">
+              allRequests.filter(r => r.type === 'testimony').map(t => (
+                <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative">
                   <div className="flex justify-between items-start mb-2">
                     {t.title && <h4 className="font-black text-[#051c38] uppercase text-xs tracking-widest flex-1 pr-12">{safeRender(t.title)}</h4>}
-                    <button 
-                      onClick={() => handleLike(t.id)}
-                      className="flex flex-col items-center gap-1 group/like transition-all active:scale-125"
-                    >
-                      <div className="p-2 bg-pink-50 rounded-full text-pink-500 group-hover/like:bg-pink-100 transition-colors">
+                    <button onClick={() => handleLike(t.id)} className="flex flex-col items-center gap-1 active:scale-125 transition-all">
+                      <div className="p-2 bg-pink-50 rounded-full text-pink-500">
                         <Heart size={16} fill={t.likes > 0 ? "currentColor" : "none"} />
                       </div>
                       <span className="text-[10px] font-black text-pink-500">{t.likes || 0}</span>
@@ -631,13 +596,8 @@ export default function App() {
                   </div>
                   <p className="text-slate-700 italic text-sm leading-relaxed mb-6">"{safeRender(t.message)}"</p>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#051c38] text-white rounded-full flex items-center justify-center font-black text-[10px] uppercase shadow-sm">
-                      {t.name ? t.name[0] : 'A'}
-                    </div>
-                    <div>
-                      <span className="font-black text-[10px] text-slate-500 uppercase tracking-widest block">{t.isAnonymous ? 'Anônimo' : safeRender(t.name)}</span>
-                      <span className="text-[8px] text-slate-300 font-bold uppercase tracking-tighter">Testemunho de Fé</span>
-                    </div>
+                    <div className="w-8 h-8 bg-[#051c38] text-white rounded-full flex items-center justify-center font-black text-[10px] uppercase">{t.name ? t.name[0] : 'A'}</div>
+                    <span className="font-black text-[10px] text-slate-500 uppercase tracking-widest">{t.isAnonymous ? 'Anônimo' : safeRender(t.name)}</span>
                   </div>
                 </div>
               ))
@@ -652,65 +612,64 @@ export default function App() {
               <h2 className="text-xl font-black text-[#051c38] uppercase tracking-tighter">Partilhar Vitória</h2>
             </div>
             <div className="space-y-5">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Seu Nome</label>
-                <input 
-                  type="text" 
-                  placeholder="Como se chama?" 
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" 
-                  value={formData.name} 
-                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                />
-              </div>
+              <input type="text" placeholder="Seu Nome" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              <input type="text" placeholder="Título da Vitória" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
+              <textarea placeholder="O que Deus fez na sua vida?" rows="6" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
+              <button onClick={() => handleSubmitRequest('testimony')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all">Publicar</button>
+            </div>
+          </div>
+        )}
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Título da Vitória</label>
-                <input 
-                  type="text" 
-                  placeholder="Ex: Cura de enfermidade" 
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" 
-                  value={formData.title} 
-                  onChange={(e) => setFormData({...formData, title: e.target.value})} 
-                />
+        {view === 'visit' && (
+          <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100">
+            <div className="flex items-center gap-2 mb-8">
+              <button onClick={() => setView('home')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><X size={20} /></button>
+              <h2 className="text-xl font-bold text-[#051c38]">Agendar Visita</h2>
+            </div>
+            <div className="space-y-5">
+              <input type="text" placeholder="Nome Completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              <input type="tel" placeholder="WhatsApp (21) 98765-4321" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.contact} onChange={handleWhatsAppChange} />
+              <input type="text" placeholder="Endereço (Rua, nº, Bairro)" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase ml-2 tracking-widest">Dia sugerido</label>
+                <div className="flex flex-wrap gap-2">
+                  {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map(day => (
+                    <button key={day} onClick={() => handleDayToggle(day)} className={`px-4 py-2 rounded-xl text-xs font-bold border ${formData.preferredDays.includes(day) ? 'bg-[#cfa855] text-white border-transparent' : 'bg-white text-slate-400 border-slate-100'}`}>{day}</button>
+                  ))}
+                </div>
               </div>
+              <input type="text" placeholder="Horário sugerido (Ex: 15:00)" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.timeSlot} onChange={(e) => setFormData({...formData, timeSlot: e.target.value})} />
+              <textarea placeholder="Observações adicionais..." rows="3" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
+              <button onClick={() => handleSubmitRequest('visit')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold active:scale-95 transition-all mt-4">Agendar Visita</button>
+            </div>
+          </div>
+        )}
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">O que Deus fez na sua vida?</label>
-                <textarea 
-                  placeholder="Conte-nos o seu testemunho..." 
-                  rows="6" 
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" 
-                  value={formData.message} 
-                  onChange={(e) => setFormData({...formData, message: e.target.value})}
-                ></textarea>
-              </div>
-
-              <button 
-                onClick={() => handleSubmitRequest('testimony')} 
-                className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all mt-4"
-              >
-                Publicar Testemunho
-              </button>
+        {view === 'login' && (
+          <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-8 animate-fade-in mt-10">
+            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 border border-slate-100 shadow-inner"><Lock size={40} /></div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-[#051c38]">Área Restrita</h2>
+              <p className="text-sm text-slate-400 font-medium">Introduza o código de acesso.</p>
+            </div>
+            <input type="password" placeholder="••••" maxLength={4} className="text-center text-4xl tracking-[1em] w-full p-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] shadow-inner font-mono" value={adminPin} onChange={(e) => setAdminPin(e.target.value)} />
+            <div className="flex gap-4">
+              <button onClick={() => setView('home')} className="flex-1 p-4 bg-slate-50 text-slate-500 rounded-2xl font-bold">Voltar</button>
+              <button onClick={checkAdmin} className="flex-1 p-4 bg-[#051c38] text-white rounded-2xl font-bold active:scale-95 transition-all">Entrar</button>
             </div>
           </div>
         )}
 
         {view === 'admin' && isAdmin && (
-          <div className="space-y-5 animate-fade-in pb-12">
+          <div className="space-y-5 animate-fade-in">
             <div className="flex items-center justify-between bg-white p-5 rounded-3xl shadow-md border border-slate-100">
               <h2 className="font-bold text-sm text-[#051c38] uppercase tracking-wider">Gestão Pastoral</h2>
-              <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"><X size={20} /></button>
+              <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full"><X size={20} /></button>
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
               {['all', 'prayer', 'visit', 'testimony'].map(cat => (
-                <button 
-                  key={cat} 
-                  onClick={() => setFilterType(cat)}
-                  className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-                    filterType === cat ? 'bg-[#051c38] text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'
-                  }`}
-                >
+                <button key={cat} onClick={() => setFilterType(cat)} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${filterType === cat ? 'bg-[#051c38] text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'}`}>
                   {cat === 'all' ? 'Todos' : cat === 'prayer' ? 'Orações' : cat === 'visit' ? 'Visitas' : 'Vitórias'}
                 </button>
               ))}
@@ -723,247 +682,60 @@ export default function App() {
                 let statusBg = 'bg-slate-100 text-slate-500';
 
                 if (req.type === 'visit') {
-                  if (req.status === 'pending') {
-                    borderClass = 'border-red-400';
-                    statusLabel = 'Visita não confirmada';
-                    statusBg = 'bg-red-50 text-red-600';
-                  } else if (req.status === 'confirmed') {
-                    borderClass = 'border-yellow-400';
-                    statusLabel = 'Visita confirmada';
-                    statusBg = 'bg-yellow-50 text-yellow-700';
-                  } else if (req.status === 'completed') {
-                    borderClass = 'border-green-400';
-                    statusLabel = 'Visita realizada';
-                    statusBg = 'bg-green-50 text-green-700';
-                  }
+                  if (req.status === 'pending') { borderClass = 'border-red-400'; statusLabel = 'Visita não confirmada'; statusBg = 'bg-red-50 text-red-600'; }
+                  else if (req.status === 'confirmed') { borderClass = 'border-yellow-400'; statusLabel = 'Visita confirmada'; statusBg = 'bg-yellow-50 text-yellow-700'; }
+                  else if (req.status === 'completed') { borderClass = 'border-green-400'; statusLabel = 'Visita realizada'; statusBg = 'bg-green-50 text-green-700'; }
                 } else {
-                  if (req.status === 'completed') {
-                    borderClass = 'border-green-400 opacity-60';
-                    statusLabel = 'Concluído';
-                    statusBg = 'bg-green-50 text-green-700';
-                  } else {
-                    borderClass = req.type === 'prayer' ? 'border-red-400' : 'border-amber-400';
-                    statusLabel = 'Pendente';
-                    statusBg = 'bg-slate-50 text-slate-500';
-                  }
+                  if (req.status === 'completed') { borderClass = 'border-green-400 opacity-60'; statusLabel = 'Concluído'; statusBg = 'bg-green-50 text-green-700'; }
+                  else { borderClass = req.type === 'prayer' ? 'border-red-400' : 'border-amber-400'; }
                 }
 
                 return (
-                  <div key={req.id} className={`bg-white rounded-3xl p-6 border-l-8 shadow-md relative group transition-all ${borderClass}`}>
+                  <div key={req.id} className={`bg-white rounded-3xl p-6 border-l-8 shadow-md relative transition-all ${borderClass}`}>
                     <div className="absolute top-4 right-4 flex gap-2">
-                      <button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                      <button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
                     </div>
                     
                     <div className="mb-4">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${statusBg}`}>
-                          {statusLabel}
-                        </span>
-                        <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-slate-50 border border-slate-100 text-slate-400">
-                          {req.type === 'visit' ? 'Visita' : req.type === 'prayer' ? 'Oração' : 'Testemunho'}
-                        </span>
+                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${statusBg}`}>{statusLabel}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-slate-50 border border-slate-100 text-slate-400">{req.type === 'visit' ? 'Visita' : req.type === 'prayer' ? 'Oração' : 'Testemunho'}</span>
                       </div>
                       <h4 className="font-black text-slate-800 text-lg">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4>
                     </div>
 
-                    {/* Exibição de Contato para Oração ou Visita */}
                     {(req.type === 'visit' || (req.type === 'prayer' && req.wantContact)) && (
-                      <div className="grid grid-cols-1 gap-3 mb-4">
-                        <div className={`flex items-center gap-3 p-3 rounded-2xl border ${req.type === 'visit' ? 'bg-blue-50/30 border-blue-100/50' : 'bg-green-50/30 border-green-100/50'}`}>
-                          <Phone size={16} className={req.type === 'visit' ? 'text-blue-500' : 'text-green-500'} />
-                          <div>
-                            <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1">WhatsApp de Contato</p>
-                            <p className="text-sm font-bold text-slate-700">{safeRender(req.contact)}</p>
-                          </div>
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 mb-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Phone size={14} className="text-green-500" />
+                          <span className="text-sm font-bold text-slate-700">{safeRender(req.contact)}</span>
                         </div>
-                        
                         {req.type === 'visit' && (
-                          <>
-                            <div className="flex items-start gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                              <MapPin size={16} className="text-slate-400 mt-1" />
-                              <div>
-                                <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1">Endereço Completo</p>
-                                <p className="text-sm font-medium text-slate-600 leading-relaxed">{safeRender(req.address)}</p>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                                <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1 flex items-center gap-1"><Calendar size={10} /> Dias</p>
-                                <p className="text-xs font-bold text-slate-600">{safeRender(req.preferredDays) || 'Não inf.'}</p>
-                              </div>
-                              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                                <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-1 flex items-center gap-1"><Clock size={10} /> Horário</p>
-                                <p className="text-xs font-bold text-slate-600">{safeRender(req.timeSlot) || 'Não inf.'}</p>
-                              </div>
-                            </div>
-                          </>
+                          <div className="flex items-start gap-2">
+                            <MapPin size={14} className="text-slate-400 mt-1" />
+                            <span className="text-xs text-slate-600">{safeRender(req.address)}</span>
+                          </div>
                         )}
                       </div>
                     )}
 
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-4">
-                      <p className="text-[9px] uppercase font-bold text-slate-400 mb-2">Observações / Mensagem</p>
-                      <p className="text-sm text-slate-600 italic leading-relaxed">"{safeRender(req.message)}"</p>
-                      {req.type === 'testimony' && (
-                        <div className="mt-2 pt-2 border-t border-slate-200/50 flex items-center gap-1 text-[9px] font-black text-pink-400 uppercase">
-                          <Heart size={10} /> {req.likes || 0} Curtidas
-                        </div>
-                      )}
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-4 italic text-sm text-slate-600 leading-relaxed">
+                      "{safeRender(req.message)}"
                     </div>
 
                     <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-50">
                       {req.type === 'visit' ? (
                         <>
-                          {req.status === 'pending' && (
-                            <button 
-                              onClick={() => handleUpdateStatus(req.id, 'confirmed')}
-                              className="flex-1 flex items-center justify-center gap-2 py-2 bg-yellow-400 text-yellow-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-yellow-500 transition-all"
-                            >
-                              <CalendarCheck size={14} /> Confirmar Visita
-                            </button>
-                          )}
-                          {(req.status === 'pending' || req.status === 'confirmed') && (
-                            <button 
-                              onClick={() => handleUpdateStatus(req.id, 'completed')}
-                              className="flex-1 flex items-center justify-center gap-2 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all"
-                            >
-                              <CheckCircle2 size={14} /> Marcar Realizada
-                            </button>
-                          )}
+                          {req.status === 'pending' && <button onClick={() => handleUpdateStatus(req.id, 'confirmed')} className="flex-1 py-2 bg-yellow-400 text-yellow-900 rounded-xl text-[10px] font-black uppercase tracking-widest">Confirmar</button>}
+                          <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="flex-1 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Concluir</button>
                         </>
                       ) : (
-                        req.status !== 'completed' && (
-                          <button 
-                            onClick={() => handleUpdateStatus(req.id, 'completed')}
-                            className="w-full flex items-center justify-center gap-2 py-2 bg-[#051c38] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all"
-                          >
-                            <CheckCircle2 size={14} /> Marcar como Concluído
-                          </button>
-                        )
+                        req.status !== 'completed' && <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-2 bg-[#051c38] text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Finalizar</button>
                       )}
                     </div>
                   </div>
                 );
               })}
-              
-              {filteredRequests.length === 0 && (
-                <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-300 italic">
-                  Nenhum registo encontrado nesta categoria.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {view === 'login' && (
-          <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-8 animate-fade-in mt-10">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 border border-slate-100 shadow-inner"><Lock size={40} /></div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-[#051c38]">Área Restrita</h2>
-              <p className="text-sm text-slate-400 font-medium leading-relaxed">Painel de gestão pastoral. Introduza o código de acesso.</p>
-            </div>
-            <input type="password" placeholder="••••" maxLength={4} className="text-center text-4xl tracking-[1em] w-full p-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] shadow-inner font-mono" value={adminPin} onChange={(e) => setAdminPin(e.target.value)} />
-            <div className="flex gap-4">
-              <button onClick={() => setView('home')} className="flex-1 p-4 bg-slate-50 text-slate-500 rounded-2xl font-bold hover:bg-slate-100 transition-colors">Voltar</button>
-              <button onClick={checkAdmin} className="flex-1 p-4 bg-[#051c38] text-white rounded-2xl font-bold hover:bg-slate-900 shadow-lg shadow-navy/20 transition-all active:scale-95">Entrar</button>
-            </div>
-          </div>
-        )}
-
-        {view === 'visit' && (
-          <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100">
-            <div className="flex items-center gap-2 mb-8">
-              <button onClick={() => setView('home')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><X size={20} /></button>
-              <h2 className="text-xl font-bold text-[#051c38]">Agendar Visita</h2>
-            </div>
-            <div className="space-y-5">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Nome Completo</label>
-                <input 
-                  type="text" 
-                  placeholder="Seu nome" 
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
-                  value={formData.name} 
-                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">WhatsApp</label>
-                <input 
-                  type="tel" 
-                  placeholder="(21) 98765-4321" 
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
-                  value={formData.contact} 
-                  onChange={handleWhatsAppChange} 
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Endereço</label>
-                <input 
-                  type="text" 
-                  placeholder="Rua, número, bairro e complemento" 
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
-                  value={formData.address} 
-                  onChange={(e) => setFormData({...formData, address: e.target.value})} 
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase ml-2 tracking-widest flex items-center gap-2">
-                  <Calendar size={14} /> Melhor dia para a visita
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map(day => (
-                    <button 
-                      key={day} 
-                      onClick={() => handleDayToggle(day)} 
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                        formData.preferredDays.includes(day) 
-                          ? 'bg-[#cfa855] text-white border-transparent shadow-md' 
-                          : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50'
-                      }`}
-                    >
-                      {day}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest flex items-center gap-2">
-                  <Clock size={14} /> Horário sugerido (24h)
-                </label>
-                <input 
-                  type="text" 
-                  placeholder="Ex: 14:30" 
-                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
-                  value={formData.timeSlot} 
-                  onChange={(e) => {
-                    let val = e.target.value.replace(/\D/g, "");
-                    if (val.length > 4) val = val.slice(0, 4);
-                    if (val.length > 2) val = val.slice(0, 2) + ":" + val.slice(2);
-                    setFormData({...formData, timeSlot: val});
-                  }} 
-                />
-              </div>
-
-              <textarea 
-                placeholder="Observações adicionais..." 
-                rows="3" 
-                className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" 
-                value={formData.message} 
-                onChange={(e) => setFormData({...formData, message: e.target.value})}
-              ></textarea>
-
-              <button 
-                onClick={() => handleSubmitRequest('visit')} 
-                className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all mt-4"
-              >
-                <Calendar size={18} /> Agendar Visita
-              </button>
             </div>
           </div>
         )}
@@ -971,30 +743,15 @@ export default function App() {
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-100 px-6 py-4 flex justify-around items-center z-40 shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.1)]">
-        <button 
-          onClick={() => setView('home')} 
-          className={`flex flex-col items-center gap-1.5 transition-all ${view === 'home' ? 'text-[#cfa855] scale-110' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <Home size={26} />
-          <span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
+        <button onClick={() => { setView('home'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'home' ? 'text-[#cfa855] scale-110' : 'text-slate-400'}`}>
+          <Home size={24} /><span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
         </button>
-
-        <button 
-          onClick={handleShare} 
-          className="flex flex-col items-center gap-1.5 transition-all text-slate-400 hover:text-[#cfa855] active:scale-110"
-        >
-          <div className="bg-[#cfa855]/10 p-2 rounded-xl text-[#cfa855]">
-            <Share2 size={26} />
-          </div>
+        <button onClick={handleShare} className="flex flex-col items-center gap-1.5 transition-all text-slate-400 active:scale-110">
+          <div className="bg-[#cfa855]/10 p-2 rounded-xl text-[#cfa855]"><Share2 size={24} /></div>
           <span className="text-[9px] font-bold uppercase tracking-widest">Partilhar</span>
         </button>
-
-        <button 
-          onClick={() => setView('testimonies')} 
-          className={`flex flex-col items-center gap-1.5 transition-all ${view === 'testimonies' || view === 'add-testimony' ? 'text-amber-500 scale-110' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <Quote size={26} />
-          <span className="text-[9px] font-bold uppercase tracking-widest">Vitórias</span>
+        <button onClick={() => { setView('testimonies'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'testimonies' || view === 'add-testimony' ? 'text-amber-500 scale-110' : 'text-slate-400'}`}>
+          <Quote size={24} /><span className="text-[9px] font-bold uppercase tracking-widest">Vitórias</span>
         </button>
       </nav>
 
