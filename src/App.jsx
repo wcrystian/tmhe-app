@@ -174,7 +174,7 @@ const ScheduleModal = ({ isOpen, onClose }) => {
     { day: 'Sexta-feira', events: [{ name: 'Culto de Libertação', time: '19:00 - 21:00' }] }
   ];
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm text-left">
       <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden animate-bounce-in border border-slate-100">
         <div className="bg-[#051c38] p-6 text-white flex justify-between items-center border-b border-[#cfa855]/30">
           <div className="flex items-center gap-3">
@@ -208,16 +208,22 @@ const ScheduleModal = ({ isOpen, onClose }) => {
 
 const Notification = ({ message, type, onClose }) => {
   useEffect(() => {
-    const timer = setTimeout(onClose, 5000);
+    const timer = setTimeout(onClose, 6000);
     return () => clearTimeout(timer);
   }, [onClose]);
 
   return (
-    <div className={`fixed top-4 left-4 right-4 md:left-auto md:w-80 z-50 p-4 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce-in border ${
-      type === 'success' ? 'bg-green-600 border-green-500 text-white' : 'bg-red-600 border-red-500 text-white'
+    <div className={`fixed top-4 left-4 right-4 md:left-auto md:w-80 z-50 p-5 rounded-2xl shadow-2xl flex items-start gap-4 animate-bounce-in border-l-[6px] ${
+      type === 'success' ? 'bg-white border-green-500 text-slate-800' : 'bg-white border-red-500 text-slate-800'
     }`}>
-      {type === 'success' ? <CheckCircle2 size={24} className="shrink-0" /> : <X size={24} className="shrink-0" />}
-      <span className="font-bold text-sm leading-tight">{message}</span>
+      <div className={`p-2 rounded-full shrink-0 ${type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+        {type === 'success' ? <CheckCircle2 size={24} /> : <X size={24} />}
+      </div>
+      <div className="flex flex-col gap-1">
+        <span className="font-bold text-sm leading-tight">{type === 'success' ? 'Sucesso!' : 'Ocorreu um erro'}</span>
+        <span className="text-xs text-slate-500 leading-relaxed font-medium">{message}</span>
+      </div>
+      <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-auto shrink-0"><X size={16} /></button>
     </div>
   );
 };
@@ -312,7 +318,7 @@ export default function App() {
         textArea.value = url; document.body.appendChild(textArea);
         textArea.select(); document.execCommand('copy');
         document.body.removeChild(textArea);
-        notify('Link copiado!', 'success');
+        notify('Link copiado para a área de transferência!', 'success');
       } catch (e) { notify('Erro ao copiar link.', 'error'); }
     };
     if (navigator.share) {
@@ -330,41 +336,54 @@ export default function App() {
   };
 
   const handleSubmitRequest = async (type) => {
-    if (!formData.message && type !== 'visit') return notify('Escreva a sua mensagem.', 'error');
-    if (type === 'visit' && (!formData.name || !formData.contact || !formData.address)) return notify('Preencha os campos obrigatórios.', 'error');
-    if (type === 'testimony' && (!formData.name || !formData.title || !formData.message)) return notify('Preencha os campos obrigatórios.', 'error');
+    if (type === 'prayer' && !formData.message) return notify('Escreva seu pedido de oração.', 'error');
+    if (type === 'visit' && (!formData.name || !formData.contact || !formData.address || formData.preferredDays.length === 0 || !formData.timeSlot)) {
+      return notify('Por favor, preencha todos os campos obrigatórios da visita.', 'error');
+    }
+    if (type === 'testimony' && (!formData.name || !formData.title || !formData.message)) return notify('Preencha todos os campos do testemunho.', 'error');
     
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'requests'), {
-        ...formData, type, status: 'pending', createdAt: serverTimestamp(), userId: user.uid, likes: type === 'testimony' ? 0 : null
+        ...formData, 
+        type, 
+        status: 'pending', 
+        createdAt: serverTimestamp(), 
+        userId: user.uid, 
+        likes: type === 'testimony' ? 0 : null
       });
-      notify('Enviado com sucesso!');
+      
+      if (type === 'visit') {
+        notify('A igreja entrará em contato para confirmar a visita.', 'success');
+      } else {
+        notify('Sua mensagem foi enviada com sucesso!', 'success');
+      }
+
       setFormData({ name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false, title: '', wantContact: false });
       setView(type === 'testimony' ? 'testimonies' : 'home');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err) { notify('Erro ao enviar.', 'error'); }
+    } catch (err) { notify('Ocorreu um erro ao enviar. Tente novamente.', 'error'); }
   };
 
   const handleUpdateStatus = async (id, newStatus) => {
     try {
       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', id), { status: newStatus });
-      notify('Estado atualizado.');
-    } catch (err) { notify('Erro ao atualizar.', 'error'); }
+      notify('Estado atualizado com sucesso.');
+    } catch (err) { notify('Erro ao atualizar status.', 'error'); }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Eliminar permanentemente?')) return;
+    if (!window.confirm('Deseja realmente eliminar este registro permanentemente?')) return;
     try {
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', id));
       notify('Registro eliminado.');
-    } catch (err) { notify('Erro ao eliminar.', 'error'); }
+    } catch (err) { notify('Erro ao eliminar registro.', 'error'); }
   };
 
   const checkAdmin = () => {
     if (adminPin === '1234') { 
       setIsAdmin(true); setView('admin'); setAdminPin('');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else { notify('PIN Incorreto', 'error'); }
+    } else { notify('PIN de acesso incorreto.', 'error'); }
   };
 
   const safeRender = (val) => {
@@ -395,41 +414,41 @@ export default function App() {
       <main className="max-w-md mx-auto px-4 mt-6 pb-40">
         
         {view === 'home' && (
-          <div className="space-y-4 animate-fade-in">
+          <div className="space-y-4 animate-fade-in text-left">
             <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-[#cfa855]/5 rounded-bl-full -mr-8 -mt-8 transition-all group-hover:scale-110"></div>
-              <h2 className="text-xl font-bold text-[#051c38] mb-2 flex items-center gap-2 text-left">
+              <h2 className="text-xl font-bold text-[#051c38] mb-2 flex items-center gap-2">
                 <Sparkles size={20} className="text-[#cfa855]" /> Bem-vindo
               </h2>
-              <p className="text-slate-500 text-sm leading-relaxed font-medium text-left">Estamos prontos para o ouvir e orar contigo.</p>
+              <p className="text-slate-500 text-sm leading-relaxed font-medium">Estamos prontos para o ouvir e orar contigo.</p>
             </div>
 
             <div className="grid grid-cols-1 gap-3">
               <button onClick={() => { setView('prayer'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
-                <div className="flex items-center gap-4 text-left">
+                <div className="flex items-center gap-4">
                   <div className="bg-red-50 p-3 rounded-xl text-red-500 group-hover:scale-110 transition-transform shrink-0"><Heart fill="currentColor" size={24} /></div>
                   <div className="text-left flex-1">
-                    <h3 className="font-bold text-slate-800">Pedido de Oração</h3>
+                    <h3 className="font-bold text-slate-800 uppercase tracking-tight">Pedido de Oração</h3>
                     <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">Compartilhe o seu fardo</p>
                   </div>
                 </div>
                 <ChevronRight className="text-slate-300" />
               </button>
               <button onClick={() => { setView('visit'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
-                <div className="flex items-center gap-4 text-left">
+                <div className="flex items-center gap-4">
                   <div className="bg-blue-50 p-3 rounded-xl text-blue-500 group-hover:scale-110 transition-transform shrink-0"><Home size={24} /></div>
                   <div className="text-left flex-1">
-                    <h3 className="font-bold text-slate-800">Solicitar Visita</h3>
+                    <h3 className="font-bold text-slate-800 uppercase tracking-tight">Solicitar Visita</h3>
                     <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">Receba apoio pastoral</p>
                   </div>
                 </div>
                 <ChevronRight className="text-slate-300" />
               </button>
               <button onClick={() => { setView('testimonies'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
-                <div className="flex items-center gap-4 text-left">
+                <div className="flex items-center gap-4">
                   <div className="bg-amber-50 p-3 rounded-xl text-amber-600 group-hover:scale-110 transition-transform shrink-0"><Quote size={24} /></div>
                   <div className="text-left flex-1">
-                    <h3 className="font-bold text-slate-800">Testemunhos</h3>
+                    <h3 className="font-bold text-slate-800 uppercase tracking-tight">Testemunhos</h3>
                     <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">Veja vitórias de fé</p>
                   </div>
                 </div>
@@ -460,8 +479,8 @@ export default function App() {
                <div className="flex flex-col items-center gap-4">
                   <div className="w-full flex justify-between items-end border-l-4 border-[#cfa855] pl-4 py-1">
                     <div className="text-left">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1 text-left">Assinatura Pastoral</p>
-                      <p className="text-sm font-black text-[#051c38] italic text-left">Pr. Presidente Cláudio Araújo</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">Assinatura Pastoral</p>
+                      <p className="text-sm font-black text-[#051c38] italic">Pr. Presidente Cláudio Araújo</p>
                     </div>
                   </div>
                   <div className="w-full flex flex-col items-center gap-3 pt-4 text-center">
@@ -478,7 +497,7 @@ export default function App() {
 
         {view === 'history' && (
           <div className="space-y-6 animate-fade-in text-left pb-12">
-            <div className="flex items-center gap-2 mb-2 text-left">
+            <div className="flex items-center gap-2 mb-2">
               <button onClick={() => setView('home')} className="p-2 -ml-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
               <h2 className="text-2xl font-black text-[#051c38] uppercase tracking-tighter">Nossa História</h2>
             </div>
@@ -486,7 +505,7 @@ export default function App() {
             <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 space-y-8 relative overflow-hidden text-left">
                <div className="absolute top-0 right-0 w-32 h-32 bg-[#cfa855]/5 rounded-bl-full -mr-16 -mt-16"></div>
                
-               <section className="space-y-4 relative z-10 text-left">
+               <section className="space-y-4 relative z-10">
                   <div className="flex items-center gap-3 text-[#cfa855]">
                     <Church size={24} />
                     <h3 className="font-black uppercase text-xs tracking-[0.2em]">O Início da Caminhada</h3>
@@ -494,7 +513,7 @@ export default function App() {
                   <p className="text-slate-600 leading-relaxed italic border-l-2 border-slate-100 pl-4 text-sm text-left">
                     "Não desprezes o dia dos pequenos começos." (Zacarias 4:10)
                   </p>
-                  <p className="text-slate-600 leading-relaxed text-sm text-left">
+                  <p className="text-slate-600 leading-relaxed text-sm">
                     A trajetória do Templo Missionário Há Esperança começou com um pequeno grupo de irmãos unidos por um propósito maior: levar a palavra de Deus e o conforto espiritual àqueles que mais precisam. 
                   </p>
                </section>
@@ -506,11 +525,11 @@ export default function App() {
                     <Target size={24} />
                     <h3 className="font-black uppercase text-xs tracking-[0.2em]">Nosso Objetivo</h3>
                   </div>
-                  <p className="text-slate-600 leading-relaxed text-sm text-left">
+                  <p className="text-slate-600 leading-relaxed text-sm">
                     Nosso objetivo principal é ser a extensão do amor de Cristo no mundo. Buscamos não apenas realizar cultos, mas transformar vidas através do evangelismo prático e do suporte social e espiritual.
                   </p>
                   <div className="grid grid-cols-1 gap-3 mt-4">
-                    <div className="bg-slate-50 p-4 rounded-2xl flex items-start gap-3 text-left">
+                    <div className="bg-slate-50 p-4 rounded-2xl flex items-start gap-3">
                       <div className="p-2 bg-white rounded-xl shadow-sm shrink-0"><Users size={16} className="text-[#051c38]" /></div>
                       <div className="text-left flex-1">
                         <h4 className="font-bold text-xs text-[#051c38] uppercase mb-1">Comunidade</h4>
@@ -520,16 +539,12 @@ export default function App() {
                   </div>
                </section>
             </div>
-            
-            <p className="text-[10px] text-slate-400 text-center uppercase font-black tracking-widest pt-4">
-              "Para que todos sejam um" (João 17:21)
-            </p>
           </div>
         )}
 
         {view === 'testimonies' && (
           <div className="space-y-4 animate-fade-in text-left pt-4">
-            <div className="flex items-center justify-between mb-6 px-2 text-left">
+            <div className="flex items-center justify-between mb-6 px-2">
               <h2 className="text-2xl font-bold text-[#051c38]">Vitórias</h2>
               <button onClick={() => { setView('add-testimony'); window.scrollTo(0,0); }} className="bg-[#cfa855] text-white px-5 py-2.5 rounded-full text-xs font-black shadow-lg flex items-center gap-2 uppercase active:scale-95 transition-all shrink-0"><Plus size={16} /> Contar Vitória</button>
             </div>
@@ -537,15 +552,15 @@ export default function App() {
               <div className="text-center py-20 text-slate-300 italic text-sm">Ainda sem testemunhos compartilhados.</div>
             ) : (
               allRequests.filter(r => r.type === 'testimony').map(t => (
-                <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative text-left">
+                <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative">
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-black text-[#051c38] uppercase text-xs tracking-widest flex-1 pr-12 text-left">{safeRender(t.title)}</h4>
-                    <button onClick={() => handleLike(t.id)} className="flex flex-col items-center gap-1 active:scale-125 transition-all shrink-0">
+                    <h4 className="font-black text-[#051c38] uppercase text-xs tracking-widest flex-1 pr-12">{safeRender(t.title)}</h4>
+                    <button onClick={() => handleLike(t.id)} className="flex flex-col items-center gap-1 active:scale-125 transition-all">
                       <div className="p-2 bg-pink-50 rounded-full text-pink-500"><Heart size={16} fill={t.likes > 0 ? "currentColor" : "none"} /></div>
                       <span className="text-[10px] font-black text-pink-500">{t.likes || 0}</span>
                     </button>
                   </div>
-                  <p className="text-slate-700 italic text-sm leading-relaxed mb-6 text-left">"{safeRender(t.message)}"</p>
+                  <p className="text-slate-700 italic text-sm leading-relaxed mb-6">"{safeRender(t.message)}"</p>
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-[#051c38] text-white rounded-full flex items-center justify-center font-black text-[10px] uppercase">{(t.name && t.name[0]) || 'A'}</div>
                     <span className="font-black text-[10px] text-slate-500 uppercase tracking-widest">{t.isAnonymous ? 'Anônimo' : safeRender(t.name)}</span>
@@ -561,7 +576,7 @@ export default function App() {
 
         {view === 'add-testimony' && (
           <div className="bg-white p-8 rounded-3xl shadow-2xl animate-slide-up border border-slate-100 text-left">
-            <div className="flex items-center gap-2 mb-8 text-left">
+            <div className="flex items-center gap-2 mb-8">
               <button onClick={() => setView('testimonies')} className="p-2 -ml-2 text-slate-400"><X size={20} /></button>
               <h2 className="text-xl font-black text-[#051c38] uppercase">Compartilhar Vitória</h2>
             </div>
@@ -569,7 +584,7 @@ export default function App() {
               <input type="text" placeholder="Seu Nome" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               <input type="text" placeholder="Título da Vitória" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
               <textarea placeholder="O que Deus fez na sua vida?" rows="6" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
-              <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100 text-left">
+              <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
                 <Info size={18} className="text-amber-600 shrink-0" />
                 <p className="text-[10px] text-amber-900 font-medium">Nota: Testemunhos são públicos e visíveis para toda a comunidade.</p>
               </div>
@@ -584,7 +599,7 @@ export default function App() {
               <button onClick={() => setView('home')} className="p-2 -ml-2 text-slate-400"><X size={20} /></button>
               <h2 className="text-xl font-bold text-[#051c38]">Pedido de Oração</h2>
             </div>
-            <div className="space-y-5">
+            <div className="space-y-5 text-left">
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                 <input type="checkbox" id="anon-p" checked={formData.isAnonymous} onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg shrink-0" />
                 <label htmlFor="anon-p" className="text-sm font-bold text-slate-600 cursor-pointer">Enviar de forma Anônima</label>
@@ -618,15 +633,96 @@ export default function App() {
         {view === 'visit' && (
           <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100 text-left">
             <div className="flex items-center gap-2 mb-8 text-left">
-              <button onClick={() => setView('home')} className="p-2 -ml-2 text-slate-400"><X size={20} /></button>
+              <button onClick={() => setView('home')} className="p-2 -ml-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors"><X size={20} /></button>
               <h2 className="text-xl font-bold text-[#051c38]">Agendar Visita</h2>
             </div>
-            <div className="space-y-5">
-              <input type="text" placeholder="Nome Completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-              <input type="tel" placeholder="WhatsApp (21) 98765-4321" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.contact} onChange={handleWhatsAppChange} />
-              <input type="text" placeholder="Endereço Completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
-              <input type="text" placeholder="Horário sugerido" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.timeSlot} onChange={(e) => setFormData({...formData, timeSlot: e.target.value})} />
-              <button onClick={() => handleSubmitRequest('visit')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold active:scale-95 transition-all mt-4 uppercase text-xs tracking-widest shadow-xl">Agendar Agora</button>
+            
+            <div className="space-y-5 text-left">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 block tracking-widest">Nome do Visitado</label>
+                <input 
+                  type="text" 
+                  placeholder="Nome completo" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
+                  value={formData.name} 
+                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 block tracking-widest">WhatsApp de Contato</label>
+                <input 
+                  type="tel" 
+                  placeholder="(21) 98765-4321" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold text-[#051c38]" 
+                  value={formData.contact} 
+                  onChange={handleWhatsAppChange} 
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 block tracking-widest">Endereço Completo</label>
+                <input 
+                  type="text" 
+                  placeholder="Rua, número, bairro e complemento" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
+                  value={formData.address} 
+                  onChange={(e) => setFormData({...formData, address: e.target.value})} 
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 block tracking-widest">Melhor dia para Visita</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+                    <button 
+                      key={day} 
+                      onClick={() => handleDayToggle(day)} 
+                      className={`py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                        formData.preferredDays.includes(day) 
+                        ? 'bg-[#051c38] text-white border-transparent shadow-md scale-95' 
+                        : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 block tracking-widest">Horário Sugerido (24h)</label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#cfa855]"><Clock size={16} /></div>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: 15:30 ou 09:00" 
+                    className="w-full p-4 pl-12 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" 
+                    value={formData.timeSlot} 
+                    onChange={(e) => setFormData({...formData, timeSlot: e.target.value})} 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 block tracking-widest text-left">Observações Adicionais</label>
+                <textarea 
+                  placeholder="Informações relevantes (ponto de referência, motivo da visita, etc)" 
+                  rows="3" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
+                  value={formData.message} 
+                  onChange={(e) => setFormData({...formData, message: e.target.value})} 
+                ></textarea>
+              </div>
+
+              <p className="text-[10px] text-slate-400 italic px-2">Os dados acima serão usados apenas para a coordenação da visita pastoral.</p>
+
+              <button 
+                onClick={() => handleSubmitRequest('visit')} 
+                className="w-full bg-[#051c38] text-white p-5 rounded-3xl font-bold active:scale-95 transition-all mt-4 uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-2"
+              >
+                <CalendarCheck size={18} /> Agendar Visita Agora
+              </button>
             </div>
           </div>
         )}
@@ -638,30 +734,114 @@ export default function App() {
             <input type="password" placeholder="••••" maxLength={4} className="text-center text-4xl tracking-[1em] w-full p-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] shadow-inner font-mono" value={adminPin} onChange={(e) => setAdminPin(e.target.value)} />
             <div className="flex gap-4">
               <button onClick={() => setView('home')} className="flex-1 p-4 bg-slate-50 text-slate-500 rounded-2xl font-bold">Voltar</button>
-              <button onClick={() => adminPin === '1234' ? (setIsAdmin(true), setView('admin')) : notify('PIN Incorreto', 'error')} className="flex-1 p-4 bg-[#051c38] text-white rounded-2xl font-bold active:scale-95 transition-all">Entrar</button>
+              <button onClick={checkAdmin} className="flex-1 p-4 bg-[#051c38] text-white rounded-2xl font-bold active:scale-95 transition-all">Entrar</button>
             </div>
           </div>
         )}
 
         {view === 'admin' && isAdmin && (
-          <div className="space-y-5 animate-fade-in text-left">
+          <div className="space-y-5 animate-fade-in text-left pb-10">
             <div className="flex items-center justify-between bg-white p-5 rounded-3xl shadow-md border border-slate-100">
               <h2 className="font-bold text-sm text-[#051c38] uppercase tracking-wider">Gestão Pastoral</h2>
-              <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full"><X size={20} /></button>
+              <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"><X size={20} /></button>
             </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+              {['all', 'visit', 'prayer', 'testimony'].map(type => (
+                <button 
+                  key={type} 
+                  onClick={() => setFilterType(type)}
+                  className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+                    filterType === type ? 'bg-[#051c38] text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'
+                  }`}
+                >
+                  {type === 'all' ? 'Todos' : type === 'visit' ? 'Visitas' : type === 'prayer' ? 'Orações' : 'Vitórias'}
+                </button>
+              ))}
+            </div>
+
             <div className="space-y-4">
-              {allRequests.length === 0 ? (
-                <div className="text-center py-20 text-slate-300 italic text-sm">Sem novos pedidos ou testemunhos.</div>
+              {allRequests.filter(r => filterType === 'all' || r.type === filterType).length === 0 ? (
+                <div className="text-center py-20 text-slate-300 italic text-sm">Nenhum registro encontrado.</div>
               ) : (
-                allRequests.map(req => (
-                  <div key={req.id} className={`bg-white rounded-3xl p-6 border-l-8 shadow-md relative transition-all text-left ${req.status === 'completed' ? 'border-green-400 opacity-60' : 'border-red-400'}`}>
-                    <div className="absolute top-4 right-4 flex gap-2"><button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button></div>
-                    <h4 className="font-black text-slate-800 text-lg mb-2 text-left">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4>
-                    <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1"><Phone size={12} /> {safeRender(req.contact)}</p>
-                    <p className="text-sm text-slate-600 italic leading-relaxed mb-4 text-left">"{safeRender(req.message)}"</p>
-                    <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-2 bg-[#051c38] text-white rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">Finalizar</button>
-                  </div>
-                ))
+                allRequests.filter(r => filterType === 'all' || r.type === filterType).map(req => {
+                  const isVisit = req.type === 'visit';
+                  let borderClass = 'border-slate-200';
+                  let statusLabel = 'Pendente';
+                  let statusBg = 'bg-slate-100 text-slate-500';
+
+                  if (isVisit) {
+                    if (req.status === 'pending') {
+                      borderClass = 'border-red-500';
+                      statusLabel = 'Não Confirmada';
+                      statusBg = 'bg-red-50 text-red-600';
+                    } else if (req.status === 'confirmed') {
+                      borderClass = 'border-yellow-500';
+                      statusLabel = 'Confirmada';
+                      statusBg = 'bg-yellow-50 text-yellow-700';
+                    } else if (req.status === 'completed') {
+                      borderClass = 'border-green-500 opacity-60';
+                      statusLabel = 'Realizada';
+                      statusBg = 'bg-green-50 text-green-700';
+                    }
+                  } else {
+                    if (req.status === 'completed') {
+                      borderClass = 'border-green-500 opacity-60';
+                      statusLabel = 'Concluído';
+                      statusBg = 'bg-green-50 text-green-700';
+                    }
+                  }
+
+                  return (
+                    <div key={req.id} className={`bg-white rounded-[2rem] p-6 border-l-8 shadow-md relative transition-all text-left ${borderClass}`}>
+                      <div className="absolute top-5 right-5 flex gap-2">
+                        <button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                      </div>
+
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full ${statusBg}`}>
+                          {statusLabel}
+                        </span>
+                        {!isVisit && (
+                          <span className="text-[9px] font-bold text-slate-300 uppercase">{req.type === 'prayer' ? 'Oração' : 'Testemunho'}</span>
+                        )}
+                      </div>
+
+                      <h4 className="font-black text-slate-800 text-lg mb-2 text-left">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4>
+                      
+                      {req.contact && (
+                        <a href={`https://wa.me/55${req.contact.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1.5 bg-green-50 w-fit px-3 py-1.5 rounded-xl">
+                          <Phone size={14} /> {safeRender(req.contact)}
+                        </a>
+                      )}
+
+                      {isVisit && (
+                        <div className="space-y-2 mb-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                          <p className="text-[11px] text-slate-600 flex items-center gap-2"><MapPin size={12} className="text-[#cfa855]" /> <strong>Endereço:</strong> {safeRender(req.address)}</p>
+                          <p className="text-[11px] text-slate-600 flex items-center gap-2"><Calendar size={12} className="text-[#cfa855]" /> <strong>Data/Hora:</strong> {safeRender(req.preferredDays)} às {safeRender(req.timeSlot)}h</p>
+                        </div>
+                      )}
+
+                      {req.message && <p className="text-sm text-slate-600 italic leading-relaxed mb-6 text-left">"{safeRender(req.message)}"</p>}
+
+                      <div className="flex flex-col gap-2">
+                        {isVisit && req.status === 'pending' && (
+                          <button onClick={() => handleUpdateStatus(req.id, 'confirmed')} className="w-full py-3 bg-yellow-400 text-yellow-900 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm">
+                            <CalendarCheck size={14} /> Confirmar Visita
+                          </button>
+                        )}
+                        {isVisit && req.status === 'confirmed' && (
+                          <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-3 bg-green-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm">
+                            <CheckCircle2 size={14} /> Marcar como Realizada
+                          </button>
+                        )}
+                        {!isVisit && req.status === 'pending' && (
+                          <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-3 bg-[#051c38] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest">Finalizar Atendimento</button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
@@ -691,6 +871,8 @@ export default function App() {
         .animate-bounce-in { animation: bounce-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        input::placeholder, textarea::placeholder { color: #cbd5e1; font-weight: 400; }
+        * { -webkit-tap-highlight-color: transparent; }
       `}} />
     </div>
   );
