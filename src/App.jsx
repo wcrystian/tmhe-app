@@ -50,8 +50,7 @@ import {
   History,
   Target,
   Users,
-  Church,
-  Printer
+  Church
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO E SEGURANÇA ---
@@ -92,20 +91,14 @@ const appId = rawAppId.replace(/\//g, '_');
 
 // --- COMPONENTES AUXILIARES ---
 
-const Header = ({ isScrolled, onLoginClick, onLogoClick, pendingCount }) => (
+const Header = ({ isScrolled, onLoginClick, onLogoClick }) => (
   <header className={`bg-[#051c38] text-white shadow-2xl rounded-b-[2.5rem] sticky top-0 z-30 border-b border-[#cfa855]/20 transition-all duration-500 ease-in-out ${isScrolled ? 'h-20 shadow-lg' : 'h-56'}`}>
     <div className="absolute top-4 right-4 z-40">
        <button 
          onClick={onLoginClick} 
-         className={`relative bg-white/10 hover:bg-white/20 rounded-full text-white/70 transition-all border border-white/5 ${isScrolled ? 'p-1.5 opacity-50' : 'p-2'}`}
+         className={`bg-white/10 hover:bg-white/20 rounded-full text-white/70 transition-all border border-white/5 ${isScrolled ? 'p-1.5 opacity-50' : 'p-2'}`}
        >
          <Lock size={isScrolled ? 14 : 18} />
-         {/* Melhoria 3: Badge de notificações pendentes */}
-         {pendingCount > 0 && (
-           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full animate-bounce shadow-lg ring-2 ring-[#051c38]">
-             {pendingCount}
-           </span>
-         )}
        </button>
     </div>
 
@@ -158,7 +151,7 @@ const LegalModal = ({ isOpen, onClose }) => {
           </section>
           <section className="bg-amber-50 p-3 rounded-xl border border-amber-100">
             <h4 className="font-bold text-amber-800 mb-1 flex items-center gap-2"><Quote size={14} /> 3. Teor Público dos Testemunhos</h4>
-            <p className="text-amber-900 text-xs font-medium">Ao publicar uma mensagem na seção "Vitórias", o usuário reconhece e aceita o seu **caráter público**. Estas mensagens destinam-se à edificação e encorajamento de todos os membros e visitantes da comunidade TMHE.</p>
+            <p className="text-amber-900 text-xs font-medium">Ao publicar uma mensagem na seção "Vitórias", o usuário reconhece e aceita o seu **caráter público**. Estas mensagens destinam-se à edificação e encorajamento de todos os membros e visitantes da comunidade TMHE que acessem à aplicação.</p>
           </section>
           <section>
             <h4 className="font-bold text-[#051c38] mb-1">4. Direitos do Usuário</h4>
@@ -190,7 +183,7 @@ const ScheduleModal = ({ isOpen, onClose }) => {
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-white/70"><X size={20} /></button>
         </div>
-        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar">
+        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar text-left">
           {schedules.map((item, idx) => (
             <div key={idx} className="space-y-3">
               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#cfa855] flex items-center gap-2">
@@ -226,7 +219,7 @@ const Notification = ({ message, type, onClose }) => {
       <div className={`p-2 rounded-full shrink-0 ${type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
         {type === 'success' ? <CheckCircle2 size={24} /> : <X size={24} />}
       </div>
-      <div className="flex flex-col gap-1 text-left">
+      <div className="flex flex-col gap-1">
         <span className="font-bold text-sm leading-tight">{type === 'success' ? 'Sucesso!' : 'Ocorreu um erro'}</span>
         <span className="text-xs text-slate-500 leading-relaxed font-medium">{message}</span>
       </div>
@@ -257,9 +250,6 @@ export default function App() {
   const [formData, setFormData] = useState({
     name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false, title: '', wantContact: false
   });
-
-  // Contador de itens pendentes (Melhoria 3)
-  const pendingCount = useMemo(() => allRequests.filter(r => r.status === 'pending').length, [allRequests]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -328,12 +318,14 @@ export default function App() {
         textArea.value = url; document.body.appendChild(textArea);
         textArea.select(); document.execCommand('copy');
         document.body.removeChild(textArea);
-        notify('Link de compartilhamento copiado!', 'success');
+        notify('Link copiado para a área de transferência!', 'success');
       } catch (e) { notify('Erro ao copiar link.', 'error'); }
     };
     if (navigator.share) {
       try { await navigator.share(shareData); } catch (err) { if (err.name !== 'AbortError') await copyToClipboard(); }
-    } else { await copyToClipboard(); }
+    } else {
+      await copyToClipboard();
+    }
   };
 
   const handleLike = async (id) => {
@@ -343,64 +335,10 @@ export default function App() {
     } catch (err) { console.error("Erro ao curtir:", err); }
   };
 
-  // Melhoria 4: Função para Imprimir Ficha de Visita
-  const handlePrintVisit = (req) => {
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Ficha de Visita - TMHE</title>
-          <style>
-            body { font-family: sans-serif; padding: 40px; color: #333; line-height: 1.6; }
-            .header { text-align: center; border-bottom: 2px solid #051c38; padding-bottom: 20px; margin-bottom: 30px; }
-            .church-name { font-size: 24px; font-weight: bold; color: #051c38; margin: 0; }
-            .title { font-size: 18px; text-transform: uppercase; letter-spacing: 2px; color: #cfa855; margin-top: 5px; }
-            .section { margin-bottom: 25px; }
-            .label { font-weight: bold; font-size: 12px; color: #666; text-transform: uppercase; display: block; margin-bottom: 5px; }
-            .value { font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 5px; display: block; }
-            .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
-            @media print { .no-print { display: none; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <p class="church-name">Templo Missionário Há Esperança</p>
-            <p class="title">Ficha de Visita Pastoral</p>
-          </div>
-          <div class="section">
-            <span class="label">Nome do Visitado</span>
-            <span class="value">${req.name}</span>
-          </div>
-          <div class="section">
-            <span class="label">WhatsApp de Contato</span>
-            <span class="value">${req.contact}</span>
-          </div>
-          <div class="section">
-            <span class="label">Endereço de Visita</span>
-            <span class="value">${req.address}</span>
-          </div>
-          <div class="section">
-            <span class="label">Dia e Horário Solicitado</span>
-            <span class="value">${req.preferredDays} às ${req.timeSlot}h</span>
-          </div>
-          <div class="section">
-            <span class="label">Observações Pastorais</span>
-            <span class="value">${req.message || 'Nenhuma observação informada.'}</span>
-          </div>
-          <div class="footer">
-            Gerado em ${new Date().toLocaleDateString('pt-BR')} via Aplicativo TMHE Digital
-          </div>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
-
   const handleSubmitRequest = async (type) => {
     if (type === 'prayer' && !formData.message) return notify('Escreva seu pedido de oração.', 'error');
     if (type === 'visit' && (!formData.name || !formData.contact || !formData.address || formData.preferredDays.length === 0 || !formData.timeSlot)) {
-      return notify('Preencha os dados da visita.', 'error');
+      return notify('Por favor, preencha todos os campos obrigatórios da visita.', 'error');
     }
     if (type === 'testimony' && (!formData.name || !formData.title || !formData.message)) return notify('Preencha todos os campos do testemunho.', 'error');
     
@@ -414,28 +352,38 @@ export default function App() {
         likes: type === 'testimony' ? 0 : null
       });
       
-      if (type === 'visit') { notify('A igreja entrará em contato para confirmar a visita.', 'success'); }
-      else { notify('Sua mensagem foi enviada com sucesso!', 'success'); }
+      if (type === 'visit') {
+        notify('A igreja entrará em contato para confirmar a visita.', 'success');
+      } else {
+        notify('Sua mensagem foi enviada com sucesso!', 'success');
+      }
 
       setFormData({ name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false, title: '', wantContact: false });
       setView(type === 'testimony' ? 'testimonies' : 'home');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err) { notify('Ocorreu um erro ao enviar.', 'error'); }
+    } catch (err) { notify('Ocorreu um erro ao enviar. Tente novamente.', 'error'); }
   };
 
   const handleUpdateStatus = async (id, newStatus) => {
     try {
       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', id), { status: newStatus });
-      notify('Estado atualizado.');
+      notify('Estado atualizado com sucesso.');
     } catch (err) { notify('Erro ao atualizar status.', 'error'); }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Eliminar permanentemente?')) return;
+    if (!window.confirm('Deseja realmente eliminar este registro permanentemente?')) return;
     try {
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', id));
       notify('Registro eliminado.');
     } catch (err) { notify('Erro ao eliminar registro.', 'error'); }
+  };
+
+  const checkAdmin = () => {
+    if (adminPin === '1234') { 
+      setIsAdmin(true); setView('admin'); setAdminPin('');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else { notify('PIN de acesso incorreto.', 'error'); }
   };
 
   const safeRender = (val) => {
@@ -461,10 +409,9 @@ export default function App() {
         isScrolled={isScrolled} 
         onLoginClick={() => { setView('login'); window.scrollTo(0,0); }}
         onLogoClick={() => { setView('history'); window.scrollTo(0,0); }}
-        pendingCount={pendingCount} // Passo o contador para o Header
       />
 
-      <main className="max-w-md mx-auto px-4 mt-6 pb-40 text-left">
+      <main className="max-w-md mx-auto px-4 mt-6 pb-40">
         
         {view === 'home' && (
           <div className="space-y-4 animate-fade-in text-left">
@@ -478,7 +425,7 @@ export default function App() {
 
             <div className="grid grid-cols-1 gap-3">
               <button onClick={() => { setView('prayer'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
-                <div className="flex items-center gap-4 text-left">
+                <div className="flex items-center gap-4">
                   <div className="bg-red-50 p-3 rounded-xl text-red-500 group-hover:scale-110 transition-transform shrink-0"><Heart fill="currentColor" size={24} /></div>
                   <div className="text-left flex-1">
                     <h3 className="font-bold text-slate-800 uppercase tracking-tight">Pedido de Oração</h3>
@@ -488,7 +435,7 @@ export default function App() {
                 <ChevronRight className="text-slate-300" />
               </button>
               <button onClick={() => { setView('visit'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
-                <div className="flex items-center gap-4 text-left">
+                <div className="flex items-center gap-4">
                   <div className="bg-blue-50 p-3 rounded-xl text-blue-500 group-hover:scale-110 transition-transform shrink-0"><Home size={24} /></div>
                   <div className="text-left flex-1">
                     <h3 className="font-bold text-slate-800 uppercase tracking-tight">Solicitar Visita</h3>
@@ -498,7 +445,7 @@ export default function App() {
                 <ChevronRight className="text-slate-300" />
               </button>
               <button onClick={() => { setView('testimonies'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
-                <div className="flex items-center gap-4 text-left">
+                <div className="flex items-center gap-4">
                   <div className="bg-amber-50 p-3 rounded-xl text-amber-600 group-hover:scale-110 transition-transform shrink-0"><Quote size={24} /></div>
                   <div className="text-left flex-1">
                     <h3 className="font-bold text-slate-800 uppercase tracking-tight">Testemunhos</h3>
@@ -554,12 +501,42 @@ export default function App() {
               <button onClick={() => setView('home')} className="p-2 -ml-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
               <h2 className="text-2xl font-black text-[#051c38] uppercase tracking-tighter">Nossa História</h2>
             </div>
+
             <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 space-y-8 relative overflow-hidden text-left">
                <div className="absolute top-0 right-0 w-32 h-32 bg-[#cfa855]/5 rounded-bl-full -mr-16 -mt-16"></div>
+               
+               <section className="space-y-4 relative z-10">
+                  <div className="flex items-center gap-3 text-[#cfa855]">
+                    <Church size={24} />
+                    <h3 className="font-black uppercase text-xs tracking-[0.2em]">O Início da Caminhada</h3>
+                  </div>
+                  <p className="text-slate-600 leading-relaxed italic border-l-2 border-slate-100 pl-4 text-sm text-left">
+                    "Não desprezes o dia dos pequenos começos." (Zacarias 4:10)
+                  </p>
+                  <p className="text-slate-600 leading-relaxed text-sm">
+                    A trajetória do Templo Missionário Há Esperança começou com um pequeno grupo de irmãos unidos por um propósito maior: levar a palavra de Deus e o conforto espiritual àqueles que mais precisam. 
+                  </p>
+               </section>
+
+               <div className="h-px bg-slate-100"></div>
+
                <section className="space-y-4 relative z-10 text-left">
-                  <div className="flex items-center gap-3 text-[#cfa855]"><Church size={24} /><h3 className="font-black uppercase text-xs tracking-[0.2em]">O Início da Caminhada</h3></div>
-                  <p className="text-slate-600 leading-relaxed italic border-l-2 border-slate-100 pl-4 text-sm text-left">"Não desprezes o dia dos pequenos começos." (Zacarias 4:10)</p>
-                  <p className="text-slate-600 leading-relaxed text-sm">A trajetória do TMHE começou com um pequeno grupo unido por levar a esperança de Deus a todos.</p>
+                  <div className="flex items-center gap-3 text-[#cfa855]">
+                    <Target size={24} />
+                    <h3 className="font-black uppercase text-xs tracking-[0.2em]">Nosso Objetivo</h3>
+                  </div>
+                  <p className="text-slate-600 leading-relaxed text-sm">
+                    Nosso objetivo principal é ser a extensão do amor de Cristo no mundo. Buscamos não apenas realizar cultos, mas transformar vidas através do evangelismo prático e do suporte social e espiritual.
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 mt-4">
+                    <div className="bg-slate-50 p-4 rounded-2xl flex items-start gap-3">
+                      <div className="p-2 bg-white rounded-xl shadow-sm shrink-0"><Users size={16} className="text-[#051c38]" /></div>
+                      <div className="text-left flex-1">
+                        <h4 className="font-bold text-xs text-[#051c38] uppercase mb-1">Comunidade</h4>
+                        <p className="text-[11px] text-slate-500">Promover a união e o suporte mútuo entre os moradores.</p>
+                      </div>
+                    </div>
+                  </div>
                </section>
             </div>
           </div>
@@ -571,29 +548,46 @@ export default function App() {
               <h2 className="text-2xl font-bold text-[#051c38]">Vitórias</h2>
               <button onClick={() => { setView('add-testimony'); window.scrollTo(0,0); }} className="bg-[#cfa855] text-white px-5 py-2.5 rounded-full text-xs font-black shadow-lg flex items-center gap-2 uppercase active:scale-95 transition-all shrink-0"><Plus size={16} /> Contar Vitória</button>
             </div>
-            {allRequests.filter(r => r.type === 'testimony').map(t => (
-                <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative text-left">
+            {allRequests.filter(r => r.type === 'testimony').length === 0 ? (
+              <div className="text-center py-20 text-slate-300 italic text-sm">Ainda sem testemunhos compartilhados.</div>
+            ) : (
+              allRequests.filter(r => r.type === 'testimony').map(t => (
+                <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative">
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-black text-[#051c38] uppercase text-xs tracking-widest flex-1 pr-12 text-left">{safeRender(t.title)}</h4>
-                    <button onClick={() => handleLike(t.id)} className="flex flex-col items-center gap-1 active:scale-125 transition-all shrink-0"><div className="p-2 bg-pink-50 rounded-full text-pink-500"><Heart size={16} fill={t.likes > 0 ? "currentColor" : "none"} /></div><span className="text-[10px] font-black text-pink-500">{t.likes || 0}</span></button>
+                    <h4 className="font-black text-[#051c38] uppercase text-xs tracking-widest flex-1 pr-12">{safeRender(t.title)}</h4>
+                    <button onClick={() => handleLike(t.id)} className="flex flex-col items-center gap-1 active:scale-125 transition-all">
+                      <div className="p-2 bg-pink-50 rounded-full text-pink-500"><Heart size={16} fill={t.likes > 0 ? "currentColor" : "none"} /></div>
+                      <span className="text-[10px] font-black text-pink-500">{t.likes || 0}</span>
+                    </button>
                   </div>
-                  <p className="text-slate-700 italic text-sm leading-relaxed mb-6 text-left">"{safeRender(t.message)}"</p>
-                  <div className="flex items-center gap-3 text-left">
+                  <p className="text-slate-700 italic text-sm leading-relaxed mb-6">"{safeRender(t.message)}"</p>
+                  <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-[#051c38] text-white rounded-full flex items-center justify-center font-black text-[10px] uppercase">{(t.name && t.name[0]) || 'A'}</div>
-                    <span className="font-black text-[10px] text-slate-500 uppercase tracking-widest text-left">{t.isAnonymous ? 'Anônimo' : safeRender(t.name)}</span>
+                    <span className="font-black text-[10px] text-slate-500 uppercase tracking-widest">{t.isAnonymous ? 'Anônimo' : safeRender(t.name)}</span>
                   </div>
                 </div>
-              ))}
+              ))
+            )}
+            <div className="text-center pt-8">
+               <button onClick={() => setView('home')} className="text-xs font-bold text-[#cfa855] uppercase tracking-widest hover:underline">Voltar ao Início</button>
+            </div>
           </div>
         )}
 
         {view === 'add-testimony' && (
           <div className="bg-white p-8 rounded-3xl shadow-2xl animate-slide-up border border-slate-100 text-left">
-            <div className="flex items-center gap-2 mb-8 text-left"><button onClick={() => setView('testimonies')} className="p-2 -ml-2 text-slate-400"><X size={20} /></button><h2 className="text-xl font-black text-[#051c38] uppercase">Compartilhar Vitória</h2></div>
-            <div className="space-y-5 text-left">
+            <div className="flex items-center gap-2 mb-8">
+              <button onClick={() => setView('testimonies')} className="p-2 -ml-2 text-slate-400"><X size={20} /></button>
+              <h2 className="text-xl font-black text-[#051c38] uppercase">Compartilhar Vitória</h2>
+            </div>
+            <div className="space-y-5">
               <input type="text" placeholder="Seu Nome" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               <input type="text" placeholder="Título da Vitória" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
               <textarea placeholder="O que Deus fez na sua vida?" rows="6" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
+              <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                <Info size={18} className="text-amber-600 shrink-0" />
+                <p className="text-[10px] text-amber-900 font-medium">Nota: Testemunhos são públicos e visíveis para toda a comunidade.</p>
+              </div>
               <button onClick={() => handleSubmitRequest('testimony')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all mt-4">Publicar</button>
             </div>
           </div>
@@ -601,30 +595,134 @@ export default function App() {
 
         {view === 'prayer' && (
           <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100 text-left">
-            <div className="flex items-center gap-2 mb-8 text-left"><button onClick={() => setView('home')} className="p-2 -ml-2 text-slate-400"><X size={20} /></button><h2 className="text-xl font-bold text-[#051c38]">Pedido de Oração</h2></div>
+            <div className="flex items-center gap-2 mb-8 text-left">
+              <button onClick={() => setView('home')} className="p-2 -ml-2 text-slate-400"><X size={20} /></button>
+              <h2 className="text-xl font-bold text-[#051c38]">Pedido de Oração</h2>
+            </div>
             <div className="space-y-5 text-left">
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-left"><input type="checkbox" id="anon-p" checked={formData.isAnonymous} onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg shrink-0" /><label htmlFor="anon-p" className="text-sm font-bold text-slate-600 cursor-pointer text-left">Enviar de forma Anônima</label></div>
-              {!formData.isAnonymous && <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-2 text-left block">Seu Nome</label><input type="text" placeholder="Nome completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} /></div>}
-              <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-2 text-left block">Pedido</label><textarea placeholder="O que vai no seu coração?" rows="5" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea></div>
-              <button onClick={() => handleSubmitRequest('prayer')} className="w-full bg-[#051c38] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all uppercase tracking-widest text-sm">Enviar Pedido</button>
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <input type="checkbox" id="anon-p" checked={formData.isAnonymous} onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg shrink-0" />
+                <label htmlFor="anon-p" className="text-sm font-bold text-slate-600 cursor-pointer">Enviar de forma Anônima</label>
+              </div>
+              {!formData.isAnonymous && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 text-left block">Seu Nome</label>
+                  <input type="text" placeholder="Nome completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                </div>
+              )}
+              <div className="space-y-1 text-left">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 text-left block">Pedido</label>
+                <textarea placeholder="O que vai no seu coração?" rows="5" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
+              </div>
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4 text-left">
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" id="want-contact" checked={formData.wantContact} onChange={(e) => setFormData({...formData, wantContact: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg shrink-0" />
+                  <label htmlFor="want-contact" className="text-sm font-bold text-slate-600 cursor-pointer">Gostaria de contato?</label>
+                </div>
+                {formData.wantContact && (
+                  <input type="tel" placeholder="(21) 98765-4321" className="w-full p-4 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.contact} onChange={handleWhatsAppChange} />
+                )}
+              </div>
+              <button onClick={() => handleSubmitRequest('prayer')} className="w-full bg-[#051c38] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all uppercase tracking-widest text-sm">
+                <Send size={18} /> Enviar Pedido
+              </button>
             </div>
           </div>
         )}
 
         {view === 'visit' && (
           <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100 text-left">
-            <div className="flex items-center gap-2 mb-8 text-left"><button onClick={() => setView('home')} className="p-2 -ml-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors"><X size={20} /></button><h2 className="text-xl font-bold text-[#051c38]">Agendar Visita</h2></div>
+            <div className="flex items-center gap-2 mb-8 text-left">
+              <button onClick={() => setView('home')} className="p-2 -ml-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors"><X size={20} /></button>
+              <h2 className="text-xl font-bold text-[#051c38]">Agendar Visita</h2>
+            </div>
+            
             <div className="space-y-5 text-left">
-              <input type="text" placeholder="Nome do Visitado" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-              <input type="tel" placeholder="WhatsApp (21) 98765-4321" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold text-[#051c38]" value={formData.contact} onChange={handleWhatsAppChange} />
-              <input type="text" placeholder="Endereço (Rua, nº, bairro e complemento)" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
-              <div className="grid grid-cols-4 gap-2">
-                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
-                    <button key={day} onClick={() => handleDayToggle(day)} className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${formData.preferredDays.includes(day) ? 'bg-[#051c38] text-white' : 'bg-white text-slate-400 border-slate-100'}`}>{day}</button>
-                  ))}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 block tracking-widest">Nome do Visitado</label>
+                <input 
+                  type="text" 
+                  placeholder="Nome completo" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
+                  value={formData.name} 
+                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                />
               </div>
-              <input type="text" placeholder="Horário Sugerido (Ex: 15:30)" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.timeSlot} onChange={(e) => setFormData({...formData, timeSlot: e.target.value})} />
-              <button onClick={() => handleSubmitRequest('visit')} className="w-full bg-[#051c38] text-white p-5 rounded-3xl font-bold active:scale-95 transition-all uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-2"><CalendarCheck size={18} /> Agendar Visita Agora</button>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 block tracking-widest">WhatsApp de Contato</label>
+                <input 
+                  type="tel" 
+                  placeholder="(21) 98765-4321" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold text-[#051c38]" 
+                  value={formData.contact} 
+                  onChange={handleWhatsAppChange} 
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 block tracking-widest">Endereço Completo</label>
+                <input 
+                  type="text" 
+                  placeholder="Rua, número, bairro e complemento" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
+                  value={formData.address} 
+                  onChange={(e) => setFormData({...formData, address: e.target.value})} 
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 block tracking-widest">Melhor dia para Visita</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+                    <button 
+                      key={day} 
+                      onClick={() => handleDayToggle(day)} 
+                      className={`py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                        formData.preferredDays.includes(day) 
+                        ? 'bg-[#051c38] text-white border-transparent shadow-md scale-95' 
+                        : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 block tracking-widest">Horário Sugerido (24h)</label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#cfa855]"><Clock size={16} /></div>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: 15:30 ou 09:00" 
+                    className="w-full p-4 pl-12 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" 
+                    value={formData.timeSlot} 
+                    onChange={(e) => setFormData({...formData, timeSlot: e.target.value})} 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 block tracking-widest text-left">Observações Adicionais</label>
+                <textarea 
+                  placeholder="Informações relevantes (ponto de referência, motivo da visita, etc)" 
+                  rows="3" 
+                  className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" 
+                  value={formData.message} 
+                  onChange={(e) => setFormData({...formData, message: e.target.value})} 
+                ></textarea>
+              </div>
+
+              <p className="text-[10px] text-slate-400 italic px-2">Os dados acima serão usados apenas para a coordenação da visita pastoral.</p>
+
+              <button 
+                onClick={() => handleSubmitRequest('visit')} 
+                className="w-full bg-[#051c38] text-white p-5 rounded-3xl font-bold active:scale-95 transition-all mt-4 uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-2"
+              >
+                <CalendarCheck size={18} /> Agendar Visita Agora
+              </button>
             </div>
           </div>
         )}
@@ -634,7 +732,10 @@ export default function App() {
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 border border-slate-100 shadow-inner shrink-0"><Lock size={40} /></div>
             <h2 className="text-2xl font-bold text-[#051c38]">Acesso Pastoral</h2>
             <input type="password" placeholder="••••" maxLength={4} className="text-center text-4xl tracking-[1em] w-full p-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] shadow-inner font-mono" value={adminPin} onChange={(e) => setAdminPin(e.target.value)} />
-            <div className="flex gap-4"><button onClick={() => setView('home')} className="flex-1 p-4 bg-slate-50 text-slate-500 rounded-2xl font-bold">Voltar</button><button onClick={() => adminPin === '1234' ? (setIsAdmin(true), setView('admin')) : notify('PIN Incorreto', 'error')} className="flex-1 p-4 bg-[#051c38] text-white rounded-2xl font-bold">Entrar</button></div>
+            <div className="flex gap-4">
+              <button onClick={() => setView('home')} className="flex-1 p-4 bg-slate-50 text-slate-500 rounded-2xl font-bold">Voltar</button>
+              <button onClick={checkAdmin} className="flex-1 p-4 bg-[#051c38] text-white rounded-2xl font-bold active:scale-95 transition-all">Entrar</button>
+            </div>
           </div>
         )}
 
@@ -642,51 +743,123 @@ export default function App() {
           <div className="space-y-5 animate-fade-in text-left pb-10">
             <div className="flex items-center justify-between bg-white p-5 rounded-3xl shadow-md border border-slate-100">
               <h2 className="font-bold text-sm text-[#051c38] uppercase tracking-wider">Gestão Pastoral</h2>
-              <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full"><X size={20} /></button>
+              <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"><X size={20} /></button>
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+              {['all', 'visit', 'prayer', 'testimony'].map(type => (
+                <button 
+                  key={type} 
+                  onClick={() => setFilterType(type)}
+                  className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+                    filterType === type ? 'bg-[#051c38] text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'
+                  }`}
+                >
+                  {type === 'all' ? 'Todos' : type === 'visit' ? 'Visitas' : type === 'prayer' ? 'Orações' : 'Vitórias'}
+                </button>
+              ))}
             </div>
 
             <div className="space-y-4">
-              {allRequests.map(req => {
-                const isVisit = req.type === 'visit';
-                let borderClass = 'border-red-500';
-                let statusLabel = 'Não Confirmada';
-                if (req.status === 'confirmed') { borderClass = 'border-yellow-500'; statusLabel = 'Confirmada'; }
-                else if (req.status === 'completed') { borderClass = 'border-green-500 opacity-60'; statusLabel = 'Realizada/Concluída'; }
+              {allRequests.filter(r => filterType === 'all' || r.type === filterType).length === 0 ? (
+                <div className="text-center py-20 text-slate-300 italic text-sm">Nenhum registro encontrado.</div>
+              ) : (
+                allRequests.filter(r => filterType === 'all' || r.type === filterType).map(req => {
+                  const isVisit = req.type === 'visit';
+                  let borderClass = 'border-slate-200';
+                  let statusLabel = 'Pendente';
+                  let statusBg = 'bg-slate-100 text-slate-500';
 
-                return (
-                  <div key={req.id} className={`bg-white rounded-[2rem] p-6 border-l-8 shadow-md relative transition-all text-left ${borderClass}`}>
-                    <div className="absolute top-5 right-5 flex gap-3 text-left">
-                      {isVisit && req.status === 'confirmed' && (
-                        <button onClick={() => handlePrintVisit(req)} className="text-slate-400 hover:text-[#051c38] transition-colors"><Printer size={16} /></button>
+                  if (isVisit) {
+                    if (req.status === 'pending') {
+                      borderClass = 'border-red-500';
+                      statusLabel = 'Não Confirmada';
+                      statusBg = 'bg-red-50 text-red-600';
+                    } else if (req.status === 'confirmed') {
+                      borderClass = 'border-yellow-500';
+                      statusLabel = 'Confirmada';
+                      statusBg = 'bg-yellow-50 text-yellow-700';
+                    } else if (req.status === 'completed') {
+                      borderClass = 'border-green-500 opacity-60';
+                      statusLabel = 'Realizada';
+                      statusBg = 'bg-green-50 text-green-700';
+                    }
+                  } else {
+                    if (req.status === 'completed') {
+                      borderClass = 'border-green-500 opacity-60';
+                      statusLabel = 'Concluído';
+                      statusBg = 'bg-green-50 text-green-700';
+                    }
+                  }
+
+                  return (
+                    <div key={req.id} className={`bg-white rounded-[2rem] p-6 border-l-8 shadow-md relative transition-all text-left ${borderClass}`}>
+                      <div className="absolute top-5 right-5 flex gap-2">
+                        <button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                      </div>
+
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full ${statusBg}`}>
+                          {statusLabel}
+                        </span>
+                        {!isVisit && (
+                          <span className="text-[9px] font-bold text-slate-300 uppercase">{req.type === 'prayer' ? 'Oração' : 'Testemunho'}</span>
+                        )}
+                      </div>
+
+                      <h4 className="font-black text-slate-800 text-lg mb-2 text-left">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4>
+                      
+                      {req.contact && (
+                        <a href={`https://wa.me/55${req.contact.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1.5 bg-green-50 w-fit px-3 py-1.5 rounded-xl">
+                          <Phone size={14} /> {safeRender(req.contact)}
+                        </a>
                       )}
-                      <button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
-                    </div>
 
-                    <div className="flex items-center gap-2 mb-3 text-left">
-                      <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-slate-100`}>{statusLabel}</span>
-                    </div>
+                      {isVisit && (
+                        <div className="space-y-2 mb-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                          <p className="text-[11px] text-slate-600 flex items-center gap-2"><MapPin size={12} className="text-[#cfa855]" /> <strong>Endereço:</strong> {safeRender(req.address)}</p>
+                          <p className="text-[11px] text-slate-600 flex items-center gap-2"><Calendar size={12} className="text-[#cfa855]" /> <strong>Data/Hora:</strong> {safeRender(req.preferredDays)} às {safeRender(req.timeSlot)}h</p>
+                        </div>
+                      )}
 
-                    <h4 className="font-black text-slate-800 text-lg mb-2 text-left">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4>
-                    
-                    {req.contact && <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1.5"><Phone size={14} /> {safeRender(req.contact)}</p>}
-                    {isVisit && <p className="text-[11px] text-slate-500 mb-2 leading-relaxed"><MapPin size={12} className="inline mr-1" /> {safeRender(req.address)}</p>}
-                    
-                    <div className="flex flex-col gap-2 mt-4">
-                      {isVisit && req.status === 'pending' && <button onClick={() => handleUpdateStatus(req.id, 'confirmed')} className="w-full py-3 bg-yellow-400 text-yellow-900 rounded-2xl text-[10px] font-black uppercase">Confirmar Visita</button>}
-                      {req.status !== 'completed' && <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-3 bg-green-500 text-white rounded-2xl text-[10px] font-black uppercase">Finalizar Processo</button>}
+                      {req.message && <p className="text-sm text-slate-600 italic leading-relaxed mb-6 text-left">"{safeRender(req.message)}"</p>}
+
+                      <div className="flex flex-col gap-2">
+                        {isVisit && req.status === 'pending' && (
+                          <button onClick={() => handleUpdateStatus(req.id, 'confirmed')} className="w-full py-3 bg-yellow-400 text-yellow-900 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm">
+                            <CalendarCheck size={14} /> Confirmar Visita
+                          </button>
+                        )}
+                        {isVisit && req.status === 'confirmed' && (
+                          <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-3 bg-green-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm">
+                            <CheckCircle2 size={14} /> Marcar como Realizada
+                          </button>
+                        )}
+                        {!isVisit && req.status === 'pending' && (
+                          <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-3 bg-[#051c38] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest">Finalizar Atendimento</button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         )}
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-100 px-6 py-4 flex justify-around items-center z-40 shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.1)]">
-        <button onClick={() => { setView('home'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'home' ? 'text-[#051c38] scale-110' : 'text-slate-400'}`}><Home size={26} /><span className="text-[9px] font-bold uppercase tracking-widest">Início</span></button>
-        <button onClick={handleShare} className="flex flex-col items-center gap-1.5 text-slate-400 active:scale-110"><div className="bg-[#cfa855]/10 p-2 rounded-xl text-[#cfa855]"><Share2 size={26} /></div><span className="text-[9px] font-bold uppercase tracking-widest text-center">Compartilhar</span></button>
-        <button onClick={() => { setView('history'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'history' ? 'text-[#051c38] scale-110' : 'text-slate-400'}`}><Church size={26} /><span className="text-[9px] font-bold uppercase tracking-widest text-center">Nossa História</span></button>
+        <button onClick={() => { setView('home'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'home' ? 'text-[#051c38] scale-110' : 'text-slate-400 hover:text-[#051c38]'}`}>
+          <Home size={26} /><span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
+        </button>
+        <button onClick={handleShare} className="flex flex-col items-center gap-1.5 text-slate-400 active:scale-110 hover:text-[#cfa855]">
+          <div className="bg-[#cfa855]/10 p-2 rounded-xl text-[#cfa855]"><Share2 size={26} /></div>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-center">Compartilhar</span>
+        </button>
+        <button onClick={() => { setView('history'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'history' ? 'text-[#051c38] scale-110' : 'text-slate-400 hover:text-[#051c38]'}`}>
+          <Church size={26} />
+          <span className="text-[9px] font-bold uppercase tracking-widest text-center">Nossa História</span>
+        </button>
       </nav>
 
       <style dangerouslySetInnerHTML={{ __html: `
@@ -698,14 +871,9 @@ export default function App() {
         .animate-bounce-in { animation: bounce-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        input::placeholder, textarea::placeholder { color: #cbd5e1; font-weight: 400; }
+        * { -webkit-tap-highlight-color: transparent; }
       `}} />
     </div>
   );
 }
-```eof
-
-Agora o app está ainda mais inteligente:
-* O Pastor verá o **contador de notificações** sobre o ícone do cadeado, sabendo exatamente quantos novos pedidos existem.
-* Ao confirmar uma visita, o **ícone da impressora** aparecerá no card, permitindo gerar a ficha para o trabalho de campo.
-
-Deseja implementar mais alguma das sugestões anteriores ou tem uma nova ideia? Seria interessante adicionar a **Área de Contribuição (PIX)** para facilitar as ofertas dos membros. O que acha?
