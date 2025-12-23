@@ -46,7 +46,11 @@ import {
   CalendarCheck,
   Info,
   ShieldCheck,
-  Scale
+  Scale,
+  History,
+  Target,
+  Users,
+  Church
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO E SEGURANÇA ---
@@ -109,7 +113,7 @@ const Header = ({ isScrolled, onLoginClick }) => (
         />
       </div>
       
-      <div className={`text-center transition-all duration-500 ease-out`}>
+      <div className="text-center transition-all duration-500 ease-out">
         <h1 className={`font-bold tracking-wider text-white transition-all duration-500 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>
           TMHE
         </h1>
@@ -143,12 +147,8 @@ const LegalModal = ({ isOpen, onClose }) => {
             <p>Os dados são de uso exclusivo do Templo Missionário Há Esperança (TMHE). Garantimos o sigilo pastoral e não compartilhamos suas informações com terceiros para fins comerciais.</p>
           </section>
           <section>
-            <h4 className="font-bold text-[#051c38] mb-1">3. Testemunhos e Imagem</h4>
-            <p>Ao publicar uma "Vitória", você autoriza a exibição pública do texto e nome (ou anonimato conforme escolhido) dentro desta plataforma para fins de edificação da comunidade.</p>
-          </section>
-          <section>
-            <h4 className="font-bold text-[#051c38] mb-1">4. Seus Direitos</h4>
-            <p>Você pode solicitar a exclusão de seus dados ou mensagens a qualquer momento através do suporte pastoral presencial na nossa sede.</p>
+            <h4 className="font-bold text-[#051c38] mb-1">3. Proteção de Conteúdo</h4>
+            <p>Qualquer conteúdo compartilhado nesta plataforma visa a edificação e comunhão da igreja, respeitando a sua privacidade conforme as opções selecionadas.</p>
           </section>
         </div>
         <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-center">
@@ -292,30 +292,25 @@ export default function App() {
         notify('Link copiado!', 'success');
       } catch (e) { notify('Erro ao copiar link.', 'error'); }
     };
-    if (navigator.share) { try { await navigator.share(shareData); } catch (err) { if (err.name !== 'AbortError') await copyToClipboard(); } }
-    else { await copyToClipboard(); }
-  };
-
-  const handleLike = async (id) => {
-    try {
-      const testimonyRef = doc(db, 'artifacts', appId, 'public', 'data', 'requests', id);
-      await updateDoc(testimonyRef, { likes: increment(1) });
-    } catch (err) { console.error("Erro ao curtir:", err); }
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch (err) { if (err.name !== 'AbortError') await copyToClipboard(); }
+    } else {
+      await copyToClipboard();
+    }
   };
 
   const handleSubmitRequest = async (type) => {
     if (!formData.message && type !== 'visit') return notify('Escreva a sua mensagem.', 'error');
     if (type === 'visit' && (!formData.name || !formData.contact || !formData.address)) return notify('Preencha os campos obrigatórios.', 'error');
-    if (type === 'testimony' && (!formData.name || !formData.title || !formData.message)) return notify('Preencha os campos obrigatórios.', 'error');
     if (type === 'prayer' && formData.wantContact && !formData.contact) return notify('Informe o WhatsApp.', 'error');
     
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'requests'), {
-        ...formData, type, status: 'pending', createdAt: serverTimestamp(), userId: user.uid, likes: type === 'testimony' ? 0 : null
+        ...formData, type, status: 'pending', createdAt: serverTimestamp(), userId: user.uid
       });
       notify('Enviado com sucesso!');
       setFormData({ name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false, title: '', wantContact: false });
-      setView(type === 'testimony' ? 'testimonies' : 'home');
+      setView('home');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) { notify('Erro ao enviar.', 'error'); }
   };
@@ -363,7 +358,7 @@ export default function App() {
 
       <Header isScrolled={isScrolled} onLoginClick={() => { setView('login'); window.scrollTo(0,0); }} />
 
-      <main className="max-w-md mx-auto px-4 mt-6 pb-32">
+      <main className="max-w-md mx-auto px-4 mt-6 pb-40">
         
         {view === 'home' && (
           <div className="space-y-4 animate-fade-in">
@@ -372,28 +367,21 @@ export default function App() {
               <h2 className="text-xl font-bold text-[#051c38] mb-2 flex items-center gap-2">
                 <Sparkles size={20} className="text-[#cfa855]" /> Bem-vindo
               </h2>
-              <p className="text-slate-500 text-sm leading-relaxed">Estamos prontos para o ouvir e orar contigo. Escolha uma das opções:</p>
+              <p className="text-slate-500 text-sm leading-relaxed font-medium">Estamos prontos para o ouvir e orar contigo.</p>
             </div>
 
             <div className="grid grid-cols-1 gap-3">
               <button onClick={() => { setView('prayer'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group">
                 <div className="flex items-center gap-4">
                   <div className="bg-red-50 p-3 rounded-xl text-red-500 group-hover:scale-110 transition-transform"><Heart fill="currentColor" size={24} /></div>
-                  <div className="text-left"><h3 className="font-bold text-slate-800">Pedido de Oração</h3><p className="text-[10px] text-slate-500 uppercase font-semibold">Partilhe o seu fardo</p></div>
+                  <div className="text-left"><h3 className="font-bold text-slate-800">Pedido de Oração</h3><p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">Partilhe o seu fardo</p></div>
                 </div>
                 <ChevronRight className="text-slate-300" />
               </button>
               <button onClick={() => { setView('visit'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group">
                 <div className="flex items-center gap-4">
                   <div className="bg-blue-50 p-3 rounded-xl text-blue-500 group-hover:scale-110 transition-transform"><Home size={24} /></div>
-                  <div className="text-left"><h3 className="font-bold text-slate-800">Solicitar Visita</h3><p className="text-[10px] text-slate-500 uppercase font-semibold">Receba apoio pastoral</p></div>
-                </div>
-                <ChevronRight className="text-slate-300" />
-              </button>
-              <button onClick={() => { setView('testimonies'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group">
-                <div className="flex items-center gap-4">
-                  <div className="bg-amber-50 p-3 rounded-xl text-amber-600 group-hover:scale-110 transition-transform"><Quote size={24} /></div>
-                  <div className="text-left"><h3 className="font-bold text-slate-800">Testemunhos</h3><p className="text-[10px] text-slate-500 uppercase font-semibold">Veja vitórias de fé</p></div>
+                  <div className="text-left"><h3 className="font-bold text-slate-800">Solicitar Visita</h3><p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">Receba apoio pastoral</p></div>
                 </div>
                 <ChevronRight className="text-slate-300" />
               </button>
@@ -426,7 +414,6 @@ export default function App() {
                       <p className="text-sm font-black text-[#051c38] italic">Pr. Presidente Cláudio Araújo</p>
                     </div>
                   </div>
-                  
                   <div className="w-full flex flex-col items-center gap-3 pt-4 text-center">
                     <button onClick={() => setShowLegal(true)} className="flex items-center gap-2 text-[10px] font-bold text-[#cfa855] uppercase hover:underline"><Scale size={12} /> Termos de Uso e Privacidade (LGPD)</button>
                     <div className="text-slate-300 text-[9px] font-bold uppercase tracking-widest text-center leading-relaxed">
@@ -436,6 +423,67 @@ export default function App() {
                   </div>
                </div>
             </footer>
+          </div>
+        )}
+
+        {view === 'history' && (
+          <div className="space-y-6 animate-fade-in text-left pb-12">
+            <div className="flex items-center gap-2 mb-2">
+              <button onClick={() => setView('home')} className="p-2 -ml-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
+              <h2 className="text-2xl font-black text-[#051c38] uppercase tracking-tighter">Nossa História</h2>
+            </div>
+
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 space-y-8 relative overflow-hidden">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-[#cfa855]/5 rounded-bl-full -mr-16 -mt-16"></div>
+               
+               <section className="space-y-4 relative z-10">
+                  <div className="flex items-center gap-3 text-[#cfa855]">
+                    <Church size={24} />
+                    <h3 className="font-black uppercase text-xs tracking-[0.2em]">O Início da Caminhada</h3>
+                  </div>
+                  <p className="text-slate-600 leading-relaxed italic border-l-2 border-slate-100 pl-4 text-sm">
+                    "Não desprezes o dia dos pequenos começos." (Zacarias 4:10)
+                  </p>
+                  <p className="text-slate-600 leading-relaxed text-sm">
+                    A trajetória do Templo Missionário Há Esperança começou com um pequeno grupo de irmãos unidos por um propósito maior: levar a palavra de Deus e o conforto espiritual àqueles que mais precisam. 
+                  </p>
+                  <p className="text-slate-600 leading-relaxed text-sm">
+                    O que nasceu em reuniões simples de oração, cresceu através da perseverança e da obediência pastoral, tornando-se hoje um ponto de referência e acolhimento para a nossa comunidade. Cada passo foi guiado pela certeza de que, em Cristo, sempre há esperança.
+                  </p>
+               </section>
+
+               <div className="h-px bg-slate-100"></div>
+
+               <section className="space-y-4 relative z-10">
+                  <div className="flex items-center gap-3 text-[#cfa855]">
+                    <Target size={24} />
+                    <h3 className="font-black uppercase text-xs tracking-[0.2em]">Nosso Objetivo</h3>
+                  </div>
+                  <p className="text-slate-600 leading-relaxed text-sm">
+                    Nosso objetivo principal é ser a extensão do amor de Cristo no mundo. Buscamos não apenas realizar cultos, mas transformar vidas através do evangelismo prático e do suporte social e espiritual.
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 mt-4">
+                    <div className="bg-slate-50 p-4 rounded-2xl flex items-start gap-3">
+                      <div className="p-2 bg-white rounded-xl shadow-sm"><Users size={16} className="text-[#051c38]" /></div>
+                      <div>
+                        <h4 className="font-bold text-xs text-[#051c38] uppercase mb-1">Comunidade</h4>
+                        <p className="text-[11px] text-slate-500">Promover a união e o suporte mútuo entre os moradores.</p>
+                      </div>
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-2xl flex items-start gap-3">
+                      <div className="p-2 bg-white rounded-xl shadow-sm"><Heart size={16} className="text-[#051c38]" /></div>
+                      <div>
+                        <h4 className="font-bold text-xs text-[#051c38] uppercase mb-1">Missão</h4>
+                        <p className="text-[11px] text-slate-500">Levar a mensagem de salvação a cada lar e coração.</p>
+                      </div>
+                    </div>
+                  </div>
+               </section>
+            </div>
+            
+            <p className="text-[10px] text-slate-400 text-center uppercase font-black tracking-widest pt-4">
+              "Para que todos sejam um" (João 17:21)
+            </p>
           </div>
         )}
 
@@ -462,51 +510,16 @@ export default function App() {
               </div>
               <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
                 <div className="flex items-center gap-3">
-                  <input type="checkbox" id="want-contact" checked={formData.wantContact} onChange={(e) => setFormData({...formData, wantContact: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg" />
+                  <input type="checkbox" id="want-contact" checked={formData.wantContact} onChange={(e) => setFormData({...formData, wantContact: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg shrink-0" />
                   <label htmlFor="want-contact" className="text-sm font-bold text-slate-600 cursor-pointer">Gostaria que a igreja entre em contato?</label>
                 </div>
                 {formData.wantContact && (
                   <input type="tel" placeholder="(21) 98765-4321" className="w-full p-4 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.contact} onChange={handleWhatsAppChange} />
                 )}
               </div>
-              <p className="text-[9px] text-slate-400 italic px-2">Nota: Seus dados serão tratados com sigilo conforme nossa Política de Privacidade baseada na LGPD.</p>
               <button onClick={() => handleSubmitRequest('prayer')} className="w-full bg-[#051c38] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all">
                 <Send size={18} /> Enviar Pedido
               </button>
-            </div>
-          </div>
-        )}
-
-        {view === 'testimonies' && (
-          <div className="space-y-4 animate-fade-in text-left">
-            <div className="flex items-center justify-between mb-6 px-2">
-              <h2 className="text-2xl font-bold text-[#051c38]">Vitórias</h2>
-              <button onClick={() => { setView('add-testimony'); window.scrollTo(0,0); }} className="bg-[#cfa855] text-white px-5 py-2.5 rounded-full text-xs font-black shadow-lg flex items-center gap-2 uppercase active:scale-95 transition-all"><Plus size={16} /> Contar Vitória</button>
-            </div>
-            {allRequests.filter(r => r.type === 'testimony').map(t => (
-              <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-black text-[#051c38] uppercase text-xs tracking-widest flex-1 pr-12">{safeRender(t.title)}</h4>
-                  <button onClick={() => handleLike(t.id)} className="flex flex-col items-center gap-1 active:scale-125 transition-all"><div className="p-2 bg-pink-50 rounded-full text-pink-500"><Heart size={16} fill={t.likes > 0 ? "currentColor" : "none"} /></div><span className="text-[10px] font-black text-pink-500">{t.likes || 0}</span></button>
-                </div>
-                <p className="text-slate-700 italic text-sm leading-relaxed mb-6">"{safeRender(t.message)}"</p>
-                <div className="flex items-center gap-3"><div className="w-8 h-8 bg-[#051c38] text-white rounded-full flex items-center justify-center font-black text-[10px] uppercase">{t.name ? t.name[0] : 'A'}</div><span className="font-black text-[10px] text-slate-500 uppercase tracking-widest">{t.isAnonymous ? 'Anônimo' : safeRender(t.name)}</span></div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {view === 'add-testimony' && (
-          <div className="bg-white p-8 rounded-3xl shadow-2xl animate-slide-up border border-slate-100 text-left">
-            <div className="flex items-center gap-2 mb-8">
-              <button onClick={() => setView('testimonies')} className="p-2 -ml-2 text-slate-400"><X size={20} /></button>
-              <h2 className="text-xl font-black text-[#051c38] uppercase">Partilhar Vitória</h2>
-            </div>
-            <div className="space-y-5">
-              <input type="text" placeholder="Seu Nome" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-              <input type="text" placeholder="Título da Vitória" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
-              <textarea placeholder="O que Deus fez na sua vida?" rows="6" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
-              <button onClick={() => handleSubmitRequest('testimony')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all mt-4">Publicar</button>
             </div>
           </div>
         )}
@@ -522,15 +535,15 @@ export default function App() {
               <input type="tel" placeholder="WhatsApp (21) 98765-4321" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.contact} onChange={handleWhatsAppChange} />
               <input type="text" placeholder="Endereço (Rua, nº, Bairro)" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase ml-2">Dia sugerido</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase ml-2 tracking-widest">Dia sugerido</label>
                 <div className="flex flex-wrap gap-2">
                   {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map(day => (
-                    <button key={day} onClick={() => handleDayToggle(day)} className={`px-4 py-2 rounded-xl text-xs font-bold border ${formData.preferredDays.includes(day) ? 'bg-[#cfa855] text-white border-transparent' : 'bg-white text-slate-400 border-slate-100'}`}>{day}</button>
+                    <button key={day} onClick={() => handleDayToggle(day)} className={`px-4 py-2 rounded-xl text-xs font-bold border ${formData.preferredDays.includes(day) ? 'bg-[#cfa855] text-white border-transparent shadow-md' : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50'}`}>{day}</button>
                   ))}
                 </div>
               </div>
               <input type="text" placeholder="Horário sugerido" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.timeSlot} onChange={(e) => setFormData({...formData, timeSlot: e.target.value})} />
-              <button onClick={() => handleSubmitRequest('visit')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold active:scale-95 transition-all mt-4 uppercase text-xs tracking-widest shadow-xl">Agendar</button>
+              <button onClick={() => handleSubmitRequest('visit')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold active:scale-95 transition-all mt-4 uppercase text-xs tracking-widest shadow-xl">Agendar Visita</button>
             </div>
           </div>
         )}
@@ -540,7 +553,7 @@ export default function App() {
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 border border-slate-100 shadow-inner"><Lock size={40} /></div>
             <div className="space-y-2">
               <h2 className="text-2xl font-bold text-[#051c38]">Área Restrita</h2>
-              <p className="text-sm text-slate-400 font-medium">Introduza o PIN de acesso.</p>
+              <p className="text-sm text-slate-400 font-medium leading-relaxed">Painel de gestão pastoral. Introduza o PIN de acesso.</p>
             </div>
             <input type="password" placeholder="••••" maxLength={4} className="text-center text-4xl tracking-[1em] w-full p-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] shadow-inner font-mono" value={adminPin} onChange={(e) => setAdminPin(e.target.value)} />
             <div className="flex gap-4">
@@ -557,8 +570,8 @@ export default function App() {
               <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full"><X size={20} /></button>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-              {['all', 'prayer', 'visit', 'testimony'].map(cat => (
-                <button key={cat} onClick={() => setFilterType(cat)} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${filterType === cat ? 'bg-[#051c38] text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'}`}>{cat === 'all' ? 'Todos' : cat === 'prayer' ? 'Orações' : cat === 'visit' ? 'Visitas' : 'Vitórias'}</button>
+              {['all', 'prayer', 'visit'].map(cat => (
+                <button key={cat} onClick={() => setFilterType(cat)} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${filterType === cat ? 'bg-[#051c38] text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'}`}>{cat === 'all' ? 'Todos' : cat === 'prayer' ? 'Orações' : 'Visitas'}</button>
               ))}
             </div>
             <div className="space-y-4">
@@ -567,7 +580,7 @@ export default function App() {
                   <div className="absolute top-4 right-4 flex gap-2"><button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button></div>
                   <div className="mb-4"><h4 className="font-black text-slate-800 text-lg">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4></div>
                   {req.contact && <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1"><Phone size={12} /> {safeRender(req.contact)}</p>}
-                  <p className="text-sm text-slate-600 italic mb-4">"{safeRender(req.message)}"</p>
+                  <p className="text-sm text-slate-600 italic leading-relaxed mb-4">"{safeRender(req.message)}"</p>
                   <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-2 bg-[#051c38] text-white rounded-xl text-[10px] font-black uppercase">Finalizar</button>
                 </div>
               ))}
@@ -577,9 +590,17 @@ export default function App() {
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-100 px-6 py-4 flex justify-around items-center z-40 shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.1)]">
-        <button onClick={() => { setView('home'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 ${view === 'home' ? 'text-[#cfa855] scale-110' : 'text-slate-400'}`}><Home size={24} /><span className="text-[9px] font-bold uppercase tracking-widest">Início</span></button>
-        <button onClick={handleShare} className="flex flex-col items-center gap-1.5 text-slate-400 active:scale-110"><div className="bg-[#cfa855]/10 p-2 rounded-xl text-[#cfa855]"><Share2 size={24} /></div><span className="text-[9px] font-bold uppercase tracking-widest">Partilhar</span></button>
-        <button onClick={() => { setView('testimonies'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 ${view === 'testimonies' || view === 'add-testimony' ? 'text-amber-500 scale-110' : 'text-slate-400'}`}><Quote size={24} /><span className="text-[9px] font-bold uppercase tracking-widest">Vitórias</span></button>
+        <button onClick={() => { setView('home'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'home' ? 'text-[#051c38] scale-110' : 'text-slate-400'}`}>
+          <Home size={26} /><span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
+        </button>
+        <button onClick={handleShare} className="flex flex-col items-center gap-1.5 text-slate-400 active:scale-110">
+          <div className="bg-[#cfa855]/10 p-2 rounded-xl text-[#cfa855]"><Share2 size={26} /></div>
+          <span className="text-[9px] font-bold uppercase tracking-widest">Partilhar</span>
+        </button>
+        <button onClick={() => { setView('history'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'history' ? 'text-[#051c38] scale-110' : 'text-slate-400'}`}>
+          <Church size={26} />
+          <span className="text-[9px] font-bold uppercase tracking-widest">Nossa História</span>
+        </button>
       </nav>
 
       <style dangerouslySetInnerHTML={{ __html: `
@@ -587,8 +608,8 @@ export default function App() {
         @keyframes slide-up { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes bounce-in { 0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
         .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
-        .animate-slide-up { animation: slide-up 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.1); }
-        .animate-bounce-in { animation: bounce-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
+        .animate-slide-up { animation: slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .animate-bounce-in { animation: bounce-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
