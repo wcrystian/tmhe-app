@@ -299,18 +299,26 @@ export default function App() {
     }
   };
 
+  const handleLike = async (id) => {
+    try {
+      const testimonyRef = doc(db, 'artifacts', appId, 'public', 'data', 'requests', id);
+      await updateDoc(testimonyRef, { likes: increment(1) });
+    } catch (err) { console.error("Erro ao curtir:", err); }
+  };
+
   const handleSubmitRequest = async (type) => {
     if (!formData.message && type !== 'visit') return notify('Escreva a sua mensagem.', 'error');
     if (type === 'visit' && (!formData.name || !formData.contact || !formData.address)) return notify('Preencha os campos obrigatórios.', 'error');
+    if (type === 'testimony' && (!formData.name || !formData.title || !formData.message)) return notify('Preencha os campos obrigatórios.', 'error');
     if (type === 'prayer' && formData.wantContact && !formData.contact) return notify('Informe o WhatsApp.', 'error');
     
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'requests'), {
-        ...formData, type, status: 'pending', createdAt: serverTimestamp(), userId: user.uid
+        ...formData, type, status: 'pending', createdAt: serverTimestamp(), userId: user.uid, likes: type === 'testimony' ? 0 : null
       });
       notify('Enviado com sucesso!');
       setFormData({ name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false, title: '', wantContact: false });
-      setView('home');
+      setView(type === 'testimony' ? 'testimonies' : 'home');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) { notify('Erro ao enviar.', 'error'); }
   };
@@ -385,6 +393,14 @@ export default function App() {
                 </div>
                 <ChevronRight className="text-slate-300" />
               </button>
+              {/* Botão de Testemunhos Restaurado na Home */}
+              <button onClick={() => { setView('testimonies'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group">
+                <div className="flex items-center gap-4">
+                  <div className="bg-amber-50 p-3 rounded-xl text-amber-600 group-hover:scale-110 transition-transform"><Quote size={24} /></div>
+                  <div className="text-left"><h3 className="font-bold text-slate-800">Testemunhos</h3><p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">Veja vitórias de fé</p></div>
+                </div>
+                <ChevronRight className="text-slate-300" />
+              </button>
             </div>
 
             <button onClick={() => setShowSchedule(true)} className="w-full bg-[#051c38] p-5 rounded-2xl shadow-lg border border-[#cfa855]/30 flex items-center justify-between group overflow-hidden relative mt-6">
@@ -433,7 +449,7 @@ export default function App() {
               <h2 className="text-2xl font-black text-[#051c38] uppercase tracking-tighter">Nossa História</h2>
             </div>
 
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 space-y-8 relative overflow-hidden">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 space-y-8 relative overflow-hidden text-left">
                <div className="absolute top-0 right-0 w-32 h-32 bg-[#cfa855]/5 rounded-bl-full -mr-16 -mt-16"></div>
                
                <section className="space-y-4 relative z-10">
@@ -446,9 +462,6 @@ export default function App() {
                   </p>
                   <p className="text-slate-600 leading-relaxed text-sm">
                     A trajetória do Templo Missionário Há Esperança começou com um pequeno grupo de irmãos unidos por um propósito maior: levar a palavra de Deus e o conforto espiritual àqueles que mais precisam. 
-                  </p>
-                  <p className="text-slate-600 leading-relaxed text-sm">
-                    O que nasceu em reuniões simples de oração, cresceu através da perseverança e da obediência pastoral, tornando-se hoje um ponto de referência e acolhimento para a nossa comunidade. Cada passo foi guiado pela certeza de que, em Cristo, sempre há esperança.
                   </p>
                </section>
 
@@ -470,13 +483,6 @@ export default function App() {
                         <p className="text-[11px] text-slate-500">Promover a união e o suporte mútuo entre os moradores.</p>
                       </div>
                     </div>
-                    <div className="bg-slate-50 p-4 rounded-2xl flex items-start gap-3">
-                      <div className="p-2 bg-white rounded-xl shadow-sm"><Heart size={16} className="text-[#051c38]" /></div>
-                      <div>
-                        <h4 className="font-bold text-xs text-[#051c38] uppercase mb-1">Missão</h4>
-                        <p className="text-[11px] text-slate-500">Levar a mensagem de salvação a cada lar e coração.</p>
-                      </div>
-                    </div>
                   </div>
                </section>
             </div>
@@ -484,6 +490,53 @@ export default function App() {
             <p className="text-[10px] text-slate-400 text-center uppercase font-black tracking-widest pt-4">
               "Para que todos sejam um" (João 17:21)
             </p>
+          </div>
+        )}
+
+        {view === 'testimonies' && (
+          <div className="space-y-4 animate-fade-in text-left pt-4">
+            <div className="flex items-center justify-between mb-6 px-2">
+              <h2 className="text-2xl font-bold text-[#051c38]">Vitórias</h2>
+              <button onClick={() => { setView('add-testimony'); window.scrollTo(0,0); }} className="bg-[#cfa855] text-white px-5 py-2.5 rounded-full text-xs font-black shadow-lg flex items-center gap-2 uppercase active:scale-95 transition-all"><Plus size={16} /> Contar Vitória</button>
+            </div>
+            {allRequests.filter(r => r.type === 'testimony').length === 0 ? (
+              <div className="text-center py-20 text-slate-300 italic text-sm">Ainda sem testemunhos partilhados.</div>
+            ) : (
+              allRequests.filter(r => r.type === 'testimony').map(t => (
+                <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-black text-[#051c38] uppercase text-xs tracking-widest flex-1 pr-12">{safeRender(t.title)}</h4>
+                    <button onClick={() => handleLike(t.id)} className="flex flex-col items-center gap-1 active:scale-125 transition-all">
+                      <div className="p-2 bg-pink-50 rounded-full text-pink-500"><Heart size={16} fill={t.likes > 0 ? "currentColor" : "none"} /></div>
+                      <span className="text-[10px] font-black text-pink-500">{t.likes || 0}</span>
+                    </button>
+                  </div>
+                  <p className="text-slate-700 italic text-sm leading-relaxed mb-6">"{safeRender(t.message)}"</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-[#051c38] text-white rounded-full flex items-center justify-center font-black text-[10px] uppercase">{t.name ? t.name[0] : 'A'}</div>
+                    <span className="font-black text-[10px] text-slate-500 uppercase tracking-widest">{t.isAnonymous ? 'Anônimo' : safeRender(t.name)}</span>
+                  </div>
+                </div>
+              ))
+            )}
+            <div className="text-center pt-8">
+               <button onClick={() => setView('home')} className="text-xs font-bold text-[#cfa855] uppercase tracking-widest">Voltar ao Início</button>
+            </div>
+          </div>
+        )}
+
+        {view === 'add-testimony' && (
+          <div className="bg-white p-8 rounded-3xl shadow-2xl animate-slide-up border border-slate-100 text-left">
+            <div className="flex items-center gap-2 mb-8">
+              <button onClick={() => setView('testimonies')} className="p-2 -ml-2 text-slate-400"><X size={20} /></button>
+              <h2 className="text-xl font-black text-[#051c38] uppercase">Partilhar Vitória</h2>
+            </div>
+            <div className="space-y-5">
+              <input type="text" placeholder="Seu Nome" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              <input type="text" placeholder="Título da Vitória" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
+              <textarea placeholder="O que Deus fez na sua vida?" rows="6" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
+              <button onClick={() => handleSubmitRequest('testimony')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all mt-4">Publicar</button>
+            </div>
           </div>
         )}
 
@@ -511,7 +564,7 @@ export default function App() {
               <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
                 <div className="flex items-center gap-3">
                   <input type="checkbox" id="want-contact" checked={formData.wantContact} onChange={(e) => setFormData({...formData, wantContact: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg shrink-0" />
-                  <label htmlFor="want-contact" className="text-sm font-bold text-slate-600 cursor-pointer">Gostaria que a igreja entre em contato?</label>
+                  <label htmlFor="want-contact" className="text-sm font-bold text-slate-600 cursor-pointer">Gostaria de contato?</label>
                 </div>
                 {formData.wantContact && (
                   <input type="tel" placeholder="(21) 98765-4321" className="w-full p-4 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.contact} onChange={handleWhatsAppChange} />
@@ -533,17 +586,9 @@ export default function App() {
             <div className="space-y-5">
               <input type="text" placeholder="Nome Completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               <input type="tel" placeholder="WhatsApp (21) 98765-4321" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.contact} onChange={handleWhatsAppChange} />
-              <input type="text" placeholder="Endereço (Rua, nº, Bairro)" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase ml-2 tracking-widest">Dia sugerido</label>
-                <div className="flex flex-wrap gap-2">
-                  {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map(day => (
-                    <button key={day} onClick={() => handleDayToggle(day)} className={`px-4 py-2 rounded-xl text-xs font-bold border ${formData.preferredDays.includes(day) ? 'bg-[#cfa855] text-white border-transparent shadow-md' : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50'}`}>{day}</button>
-                  ))}
-                </div>
-              </div>
+              <input type="text" placeholder="Endereço Completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
               <input type="text" placeholder="Horário sugerido" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.timeSlot} onChange={(e) => setFormData({...formData, timeSlot: e.target.value})} />
-              <button onClick={() => handleSubmitRequest('visit')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold active:scale-95 transition-all mt-4 uppercase text-xs tracking-widest shadow-xl">Agendar Visita</button>
+              <button onClick={() => handleSubmitRequest('visit')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold active:scale-95 transition-all mt-4 uppercase text-xs tracking-widest shadow-xl">Agendar</button>
             </div>
           </div>
         )}
@@ -551,10 +596,7 @@ export default function App() {
         {view === 'login' && (
           <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-8 animate-fade-in mt-10">
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 border border-slate-100 shadow-inner"><Lock size={40} /></div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-[#051c38]">Área Restrita</h2>
-              <p className="text-sm text-slate-400 font-medium leading-relaxed">Painel de gestão pastoral. Introduza o PIN de acesso.</p>
-            </div>
+            <h2 className="text-2xl font-bold text-[#051c38]">Acesso Pastoral</h2>
             <input type="password" placeholder="••••" maxLength={4} className="text-center text-4xl tracking-[1em] w-full p-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] shadow-inner font-mono" value={adminPin} onChange={(e) => setAdminPin(e.target.value)} />
             <div className="flex gap-4">
               <button onClick={() => setView('home')} className="flex-1 p-4 bg-slate-50 text-slate-500 rounded-2xl font-bold">Voltar</button>
@@ -566,22 +608,17 @@ export default function App() {
         {view === 'admin' && isAdmin && (
           <div className="space-y-5 animate-fade-in text-left">
             <div className="flex items-center justify-between bg-white p-5 rounded-3xl shadow-md border border-slate-100">
-              <h2 className="font-bold text-sm text-[#051c38] uppercase tracking-wider">Gestão Pastoral</h2>
+              <h2 className="font-bold text-sm text-[#051c38] uppercase tracking-wider">Gestão</h2>
               <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full"><X size={20} /></button>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-              {['all', 'prayer', 'visit'].map(cat => (
-                <button key={cat} onClick={() => setFilterType(cat)} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${filterType === cat ? 'bg-[#051c38] text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'}`}>{cat === 'all' ? 'Todos' : cat === 'prayer' ? 'Orações' : 'Visitas'}</button>
-              ))}
             </div>
             <div className="space-y-4">
               {allRequests.filter(r => filterType === 'all' || r.type === filterType).map(req => (
-                <div key={req.id} className={`bg-white rounded-3xl p-6 border-l-8 shadow-md relative transition-all ${req.status === 'completed' ? 'border-green-400' : 'border-red-400'}`}>
+                <div key={req.id} className={`bg-white rounded-3xl p-6 border-l-8 shadow-md relative transition-all ${req.status === 'completed' ? 'border-green-400 opacity-60' : 'border-red-400'}`}>
                   <div className="absolute top-4 right-4 flex gap-2"><button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button></div>
-                  <div className="mb-4"><h4 className="font-black text-slate-800 text-lg">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4></div>
-                  {req.contact && <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1"><Phone size={12} /> {safeRender(req.contact)}</p>}
+                  <h4 className="font-black text-slate-800 text-lg mb-2">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4>
+                  <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1"><Phone size={12} /> {safeRender(req.contact)}</p>
                   <p className="text-sm text-slate-600 italic leading-relaxed mb-4">"{safeRender(req.message)}"</p>
-                  <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-2 bg-[#051c38] text-white rounded-xl text-[10px] font-black uppercase">Finalizar</button>
+                  <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-2 bg-[#051c38] text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Finalizar</button>
                 </div>
               ))}
             </div>
@@ -589,6 +626,7 @@ export default function App() {
         )}
       </main>
 
+      {/* Navegação Inferior Atualizada: Início | Partilhar | Nossa História (Igreja) */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-100 px-6 py-4 flex justify-around items-center z-40 shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.1)]">
         <button onClick={() => { setView('home'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'home' ? 'text-[#051c38] scale-110' : 'text-slate-400'}`}>
           <Home size={26} /><span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
@@ -599,7 +637,7 @@ export default function App() {
         </button>
         <button onClick={() => { setView('history'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'history' ? 'text-[#051c38] scale-110' : 'text-slate-400'}`}>
           <Church size={26} />
-          <span className="text-[9px] font-bold uppercase tracking-widest">Nossa História</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-center">Nossa História</span>
         </button>
       </nav>
 
