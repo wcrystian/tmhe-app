@@ -85,29 +85,41 @@ const appId = rawAppId.replace(/\//g, '_');
 
 // --- COMPONENTES AUXILIARES ---
 
-const Logo = ({ isScrolled }) => (
-  <div className={`flex flex-col items-center justify-center transition-all duration-500 ease-in-out ${isScrolled ? 'py-2' : 'py-4'}`}>
-    <div className={`relative flex items-center justify-center transition-all duration-500 overflow-hidden ${isScrolled ? 'h-0 opacity-0 mb-0' : 'h-24 w-24 mb-2 opacity-100'}`}>
-      <div className="absolute inset-0 border-2 border-[#cfa855] rounded-full animate-pulse"></div>
-      <img
-        src="/logo.png"
-        alt="TMHE Logo"
-        className="z-10 w-20 h-20 object-contain"
-        onError={(e) => {
-          e.target.src = "https://via.placeholder.com/150?text=TMHE";
-        }}
-      />
+const Header = ({ isScrolled, onLoginClick }) => (
+  <header className={`bg-[#051c38] text-white shadow-2xl rounded-b-[2.5rem] sticky top-0 z-30 border-b border-[#cfa855]/20 transition-all duration-500 ease-in-out ${isScrolled ? 'h-20 shadow-lg' : 'h-56'}`}>
+    {/* Botão de Login flutuante para não sofrer com a tremedeira do flex */}
+    <div className="absolute top-4 right-4 z-40">
+       <button 
+         onClick={onLoginClick} 
+         className={`bg-white/10 hover:bg-white/20 rounded-full text-white/70 transition-all border border-white/5 ${isScrolled ? 'p-1.5 opacity-50' : 'p-2'}`}
+       >
+         <Lock size={isScrolled ? 14 : 18} />
+       </button>
     </div>
-    
-    <div className="text-center transition-all duration-300">
-      <h1 className={`font-bold tracking-wider text-white leading-tight transition-all duration-300 ${isScrolled ? 'text-lg' : 'text-2xl'}`}>
-        TMHE
-      </h1>
-      <p className={`uppercase tracking-[0.15em] text-[#cfa855] font-semibold transition-all duration-300 ${isScrolled ? 'text-[8px]' : 'text-[10px]'}`}>
-        Templo Missionário Há Esperança
-      </p>
+
+    <div className="flex flex-col items-center justify-center h-full px-4 overflow-hidden">
+      {/* Container da Logo com transição suave de escala e opacidade */}
+      <div className={`relative flex items-center justify-center transition-all duration-500 ease-out transform ${isScrolled ? 'scale-0 h-0 opacity-0' : 'scale-100 h-28 w-28 mb-3 opacity-100'}`}>
+        <div className="absolute inset-0 border-2 border-[#cfa855] rounded-full animate-pulse"></div>
+        <img
+          src="/logo.png"
+          alt="TMHE Logo"
+          className="z-10 w-24 h-24 object-contain"
+          onError={(e) => { e.target.src = "https://via.placeholder.com/150?text=TMHE"; }}
+        />
+      </div>
+      
+      {/* Texto adaptativo */}
+      <div className={`text-center transition-all duration-500 ease-out ${isScrolled ? 'translate-y-0' : 'translate-y-0'}`}>
+        <h1 className={`font-bold tracking-wider text-white transition-all duration-500 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>
+          TMHE
+        </h1>
+        <p className={`uppercase tracking-[0.15em] text-[#cfa855] font-semibold transition-all duration-500 ${isScrolled ? 'text-[8px] opacity-70' : 'text-[10px]'}`}>
+          Templo Missionário Há Esperança
+        </p>
+      </div>
     </div>
-  </div>
+  </header>
 );
 
 const Notification = ({ message, type, onClose }) => {
@@ -157,7 +169,7 @@ const ScheduleModal = ({ isOpen, onClose }) => {
           </button>
         </div>
         
-        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar">
+        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar text-left">
           {schedules.map((item, idx) => (
             <div key={idx} className="space-y-3">
               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#cfa855] flex items-center gap-2">
@@ -166,11 +178,9 @@ const ScheduleModal = ({ isOpen, onClose }) => {
               </h4>
               <div className="space-y-2">
                 {item.events.map((event, eIdx) => (
-                  <div key={eIdx} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between group hover:border-[#cfa855]/30 transition-all">
-                    <div className="flex flex-col flex-1 mr-2">
-                      <span className="text-sm font-bold text-slate-800 leading-tight">{event.name}</span>
-                    </div>
-                    <div className="shrink-0 flex items-center gap-2 text-[#cfa855] font-bold text-xs bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm whitespace-nowrap">
+                  <div key={eIdx} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between group">
+                    <span className="text-sm font-bold text-slate-800 leading-tight">{event.name}</span>
+                    <div className="shrink-0 flex items-center gap-2 text-[#cfa855] font-bold text-xs bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm whitespace-nowrap ml-2">
                       <Clock size={12} />
                       {event.time}
                     </div>
@@ -210,63 +220,39 @@ export default function App() {
   const [filterType, setFilterType] = useState('all');
 
   const [formData, setFormData] = useState({
-    name: '',
-    contact: '',
-    message: '',
-    address: '',
-    preferredDays: [],
-    timeSlot: '',
-    isAnonymous: false,
-    title: '',
-    wantContact: false
+    name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false, title: '', wantContact: false
   });
 
+  // Listener de Scroll para encolher o Header (Threshold de 20px para maior estabilidade)
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 40) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
-    if (configMissing) {
-      setLoading(false);
-      return;
-    }
+    if (configMissing) { setLoading(false); return; }
     const initAuth = async () => {
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (err) {
-        console.error("Erro Auth:", err);
-      }
+        } else { await signInAnonymously(auth); }
+      } catch (err) { console.error("Erro Auth:", err); }
     };
     initAuth();
-    return onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
-    });
+    return onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
   }, [configMissing]);
 
   useEffect(() => {
     if (!user || configMissing) return;
     const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'requests'));
-    const unsubscribe = onSnapshot(q, 
-      (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const sorted = data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
         setAllRequests(sorted);
-      },
-      (err) => console.error("Erro no Banco de Dados:", err)
-    );
+      }, (err) => console.error("Erro no Banco de Dados:", err));
     return () => unsubscribe();
   }, [user, configMissing]);
 
@@ -280,9 +266,7 @@ export default function App() {
       formatted = `(${v.slice(0, 2)}`;
       if (v.length > 2) {
         formatted += `) ${v.slice(2, 7)}`;
-        if (v.length > 7) {
-          formatted += `-${v.slice(7)}`;
-        }
+        if (v.length > 7) { formatted += `-${v.slice(7)}`; }
       }
     }
     return formatted;
@@ -302,67 +286,42 @@ export default function App() {
 
   const handleShare = async () => {
     const url = window.location.href;
-    const shareData = {
-      title: 'Templo Missionário Há Esperança',
-      text: 'Olá! Conheça o aplicativo do TMHE para pedidos de oração, visitas e testemunhos.',
-      url: url
-    };
+    const shareData = { title: 'TMHE', text: 'Conheça o aplicativo do TMHE.', url: url };
     const copyToClipboard = async () => {
       try {
         const textArea = document.createElement("textarea");
-        textArea.value = url;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
+        textArea.value = url; document.body.appendChild(textArea);
+        textArea.select(); document.execCommand('copy');
         document.body.removeChild(textArea);
-        notify('Link copiado! Já o pode colar no WhatsApp ou redes sociais.', 'success');
-      } catch (e) {
-        notify('Não foi possível copiar o link automaticamente.', 'error');
-      }
+        notify('Link copiado!', 'success');
+      } catch (e) { notify('Erro ao copiar link.', 'error'); }
     };
-    if (navigator.share) {
-      try { await navigator.share(shareData); } catch (err) { if (err.name !== 'AbortError') await copyToClipboard(); }
-    } else {
-      await copyToClipboard();
-    }
+    if (navigator.share) { try { await navigator.share(shareData); } catch (err) { if (err.name !== 'AbortError') await copyToClipboard(); } }
+    else { await copyToClipboard(); }
   };
 
   const handleLike = async (id) => {
     try {
       const testimonyRef = doc(db, 'artifacts', appId, 'public', 'data', 'requests', id);
-      await updateDoc(testimonyRef, {
-        likes: increment(1)
-      });
-    } catch (err) {
-      console.error("Erro ao curtir:", err);
-    }
+      await updateDoc(testimonyRef, { likes: increment(1) });
+    } catch (err) { console.error("Erro ao curtir:", err); }
   };
 
   const handleSubmitRequest = async (type) => {
     if (!formData.message && type !== 'visit') return notify('Escreva a sua mensagem.', 'error');
     if (type === 'visit' && (!formData.name || !formData.contact || !formData.address)) return notify('Preencha nome, whatsapp e endereço.', 'error');
     if (type === 'testimony' && (!formData.name || !formData.title || !formData.message)) return notify('Preencha nome, título e testemunho.', 'error');
-    if (type === 'prayer' && formData.wantContact && !formData.contact) return notify('Informe o seu WhatsApp para contato.', 'error');
+    if (type === 'prayer' && formData.wantContact && !formData.contact) return notify('Informe o seu WhatsApp.', 'error');
     
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'requests'), {
-        ...formData,
-        type,
-        status: 'pending', 
-        createdAt: serverTimestamp(),
-        userId: user.uid,
-        likes: type === 'testimony' ? 0 : null
+        ...formData, type, status: 'pending', createdAt: serverTimestamp(), userId: user.uid, likes: type === 'testimony' ? 0 : null
       });
-      const successMsg = type === 'visit' 
-        ? 'A igreja entrará em contato para confirmar a visita.' 
-        : 'Enviado com sucesso!';
-      notify(successMsg);
+      notify('Enviado com sucesso!');
       setFormData({ name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false, title: '', wantContact: false });
       setView(type === 'testimony' ? 'testimonies' : 'home');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err) {
-      notify('Erro ao enviar.', 'error');
-    }
+    } catch (err) { notify('Erro ao enviar.', 'error'); }
   };
 
   const handleUpdateStatus = async (id, newStatus) => {
@@ -382,9 +341,7 @@ export default function App() {
 
   const checkAdmin = () => {
     if (adminPin === '1234') { 
-      setIsAdmin(true);
-      setView('admin');
-      setAdminPin('');
+      setIsAdmin(true); setView('admin'); setAdminPin('');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else { notify('PIN Incorreto', 'error'); }
   };
@@ -407,18 +364,8 @@ export default function App() {
       
       <ScheduleModal isOpen={showSchedule} onClose={() => setShowSchedule(false)} />
 
-      {/* HEADER ADAPTATIVO */}
-      <header className={`bg-[#051c38] text-white shadow-2xl rounded-b-[2rem] sticky top-0 z-30 border-b border-[#cfa855]/20 transition-all duration-500 ease-in-out ${isScrolled ? 'pb-2' : 'pb-6'}`}>
-        <div className="absolute top-4 right-4 z-40">
-           <button 
-             onClick={() => setView('login')} 
-             className={`bg-white/10 hover:bg-white/20 rounded-full text-white/70 transition-all border border-white/5 ${isScrolled ? 'p-1.5' : 'p-2'}`}
-           >
-             <Lock size={isScrolled ? 14 : 18} />
-           </button>
-        </div>
-        <Logo isScrolled={isScrolled} />
-      </header>
+      {/* HEADER ADAPTATIVO MELHORADO */}
+      <Header isScrolled={isScrolled} onLoginClick={() => { setView('login'); window.scrollTo(0,0); }} />
 
       <main className="max-w-md mx-auto px-4 mt-6 pb-32">
         
@@ -523,10 +470,13 @@ export default function App() {
                 <label htmlFor="anon-p" className="text-sm font-bold text-slate-600 cursor-pointer">Enviar de forma Anônima</label>
               </div>
               {!formData.isAnonymous && (
-                <input type="text" placeholder="Nome completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Seu Nome</label>
+                  <input type="text" placeholder="Nome completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                </div>
               )}
               <textarea placeholder="O que vai no seu coração?" rows="5" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
-              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4 text-left">
                 <div className="flex items-center gap-3">
                   <input type="checkbox" id="want-contact" checked={formData.wantContact} onChange={(e) => setFormData({...formData, wantContact: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg shrink-0" />
                   <label htmlFor="want-contact" className="text-sm font-bold text-slate-600 cursor-pointer">Gostaria que a igreja entre em contato?</label>
@@ -551,7 +501,7 @@ export default function App() {
               </button>
             </div>
             {allRequests.filter(r => r.type === 'testimony').map(t => (
-              <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative">
+              <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative text-left">
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-black text-[#051c38] uppercase text-xs tracking-widest flex-1 pr-12">{safeRender(t.title)}</h4>
                   <button onClick={() => handleLike(t.id)} className="flex flex-col items-center gap-1 active:scale-125 transition-all">
@@ -577,7 +527,7 @@ export default function App() {
               <button onClick={() => setView('testimonies')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><X size={20} /></button>
               <h2 className="text-xl font-black text-[#051c38] uppercase tracking-tighter">Partilhar Vitória</h2>
             </div>
-            <div className="space-y-5">
+            <div className="space-y-5 text-left">
               <input type="text" placeholder="Seu Nome" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               <input type="text" placeholder="Título da Vitória" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
               <textarea placeholder="O que Deus fez na sua vida?" rows="6" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
@@ -587,7 +537,7 @@ export default function App() {
         )}
 
         {view === 'visit' && (
-          <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100">
+          <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100 text-left">
             <div className="flex items-center gap-2 mb-8">
               <button onClick={() => setView('home')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><X size={20} /></button>
               <h2 className="text-xl font-bold text-[#051c38]">Agendar Visita</h2>
@@ -627,7 +577,7 @@ export default function App() {
         )}
 
         {view === 'admin' && isAdmin && (
-          <div className="space-y-5 animate-fade-in">
+          <div className="space-y-5 animate-fade-in text-left">
             <div className="flex items-center justify-between bg-white p-5 rounded-3xl shadow-md border border-slate-100">
               <h2 className="font-bold text-sm text-[#051c38] uppercase tracking-wider">Gestão Pastoral</h2>
               <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full"><X size={20} /></button>
