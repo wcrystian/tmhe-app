@@ -87,7 +87,6 @@ const appId = rawAppId.replace(/\//g, '_');
 
 const Logo = ({ isScrolled }) => (
   <div className={`flex flex-col items-center justify-center transition-all duration-500 ease-in-out ${isScrolled ? 'py-2' : 'py-4'}`}>
-    {/* A imagem desaparece completamente ao rolar */}
     <div className={`relative flex items-center justify-center transition-all duration-500 overflow-hidden ${isScrolled ? 'h-0 opacity-0 mb-0' : 'h-24 w-24 mb-2 opacity-100'}`}>
       <div className="absolute inset-0 border-2 border-[#cfa855] rounded-full animate-pulse"></div>
       <img
@@ -222,7 +221,6 @@ export default function App() {
     wantContact: false
   });
 
-  // Listener de Scroll para encolher o Header
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 40) {
@@ -231,7 +229,6 @@ export default function App() {
         setIsScrolled(false);
       }
     };
-
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -241,7 +238,6 @@ export default function App() {
       setLoading(false);
       return;
     }
-
     const initAuth = async () => {
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -262,7 +258,6 @@ export default function App() {
 
   useEffect(() => {
     if (!user || configMissing) return;
-
     const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'requests'));
     const unsubscribe = onSnapshot(q, 
       (snapshot) => {
@@ -280,7 +275,6 @@ export default function App() {
   const handleWhatsAppFormat = (value) => {
     let v = value.replace(/\D/g, "");
     if (v.length > 11) v = v.slice(0, 11);
-    
     let formatted = v;
     if (v.length > 0) {
       formatted = `(${v.slice(0, 2)}`;
@@ -313,33 +307,21 @@ export default function App() {
       text: 'Olá! Conheça o aplicativo do TMHE para pedidos de oração, visitas e testemunhos.',
       url: url
     };
-
     const copyToClipboard = async () => {
       try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(url);
-        } else {
-          const textArea = document.createElement("textarea");
-          textArea.value = url;
-          document.body.appendChild(textArea);
-          textArea.select();
-          document.execCommand('copy');
-          document.body.removeChild(textArea);
-        }
+        const textArea = document.createElement("textarea");
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
         notify('Link copiado! Já o pode colar no WhatsApp ou redes sociais.', 'success');
       } catch (e) {
         notify('Não foi possível copiar o link automaticamente.', 'error');
       }
     };
-
     if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          await copyToClipboard();
-        }
-      }
+      try { await navigator.share(shareData); } catch (err) { if (err.name !== 'AbortError') await copyToClipboard(); }
     } else {
       await copyToClipboard();
     }
@@ -371,11 +353,9 @@ export default function App() {
         userId: user.uid,
         likes: type === 'testimony' ? 0 : null
       });
-
       const successMsg = type === 'visit' 
         ? 'A igreja entrará em contato para confirmar a visita.' 
         : 'Enviado com sucesso!';
-
       notify(successMsg);
       setFormData({ name: '', contact: '', message: '', address: '', preferredDays: [], timeSlot: '', isAnonymous: false, title: '', wantContact: false });
       setView(type === 'testimony' ? 'testimonies' : 'home');
@@ -415,11 +395,6 @@ export default function App() {
     return String(val);
   };
 
-  const filteredRequests = useMemo(() => {
-    if (filterType === 'all') return allRequests;
-    return allRequests.filter(r => r.type === filterType);
-  }, [allRequests, filterType]);
-
   if (loading) return (
     <div className="flex items-center justify-center h-screen bg-[#f1f5f9]">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#cfa855]"></div>
@@ -432,7 +407,7 @@ export default function App() {
       
       <ScheduleModal isOpen={showSchedule} onClose={() => setShowSchedule(false)} />
 
-      {/* HEADER ADAPTATIVO: Encolhe ao rolar */}
+      {/* HEADER ADAPTATIVO */}
       <header className={`bg-[#051c38] text-white shadow-2xl rounded-b-[2rem] sticky top-0 z-30 border-b border-[#cfa855]/20 transition-all duration-500 ease-in-out ${isScrolled ? 'pb-2' : 'pb-6'}`}>
         <div className="absolute top-4 right-4 z-40">
            <button 
@@ -525,6 +500,14 @@ export default function App() {
                   </a>
                </div>
             </div>
+
+            {/* ASSINATURA DO PASTOR PRESIDENTE */}
+            <footer className="mt-8 pt-4 pb-12 border-t border-slate-200">
+               <div className="flex flex-col items-start px-2">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">Assinatura Pastoral</p>
+                  <p className="text-sm font-black text-[#051c38] italic">Pr. Presidente Cláudio Araújo</p>
+               </div>
+            </footer>
           </div>
         )}
 
@@ -539,32 +522,19 @@ export default function App() {
                 <input type="checkbox" id="anon-p" checked={formData.isAnonymous} onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg" />
                 <label htmlFor="anon-p" className="text-sm font-bold text-slate-600 cursor-pointer">Enviar de forma Anônima</label>
               </div>
-
               {!formData.isAnonymous && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Seu Nome</label>
-                  <input type="text" placeholder="Seu nome completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-                </div>
+                <input type="text" placeholder="Nome completo" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               )}
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Pedido</label>
-                <textarea placeholder="O que vai no seu coração?" rows="5" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
-              </div>
-
+              <textarea placeholder="O que vai no seu coração?" rows="5" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
               <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
                 <div className="flex items-center gap-3">
                   <input type="checkbox" id="want-contact" checked={formData.wantContact} onChange={(e) => setFormData({...formData, wantContact: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg shrink-0" />
                   <label htmlFor="want-contact" className="text-sm font-bold text-slate-600 cursor-pointer">Gostaria que a igreja entre em contato?</label>
                 </div>
                 {formData.wantContact && (
-                  <div className="animate-fade-in pt-1">
-                    <label className="text-[10px] font-bold text-[#cfa855] uppercase ml-1 tracking-widest block mb-1">Seu WhatsApp</label>
-                    <input type="tel" placeholder="(21) 98765-4321" className="w-full p-4 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.contact} onChange={handleWhatsAppChange} />
-                  </div>
+                  <input type="tel" placeholder="(21) 98765-4321" className="w-full p-4 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#cfa855]" value={formData.contact} onChange={handleWhatsAppChange} />
                 )}
               </div>
-
               <button onClick={() => handleSubmitRequest('prayer')} className="w-full bg-[#051c38] text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all">
                 <Send size={18} /> Enviar Pedido
               </button>
@@ -580,28 +550,24 @@ export default function App() {
                 <Plus size={16} /> Contar Vitória
               </button>
             </div>
-            {allRequests.filter(r => r.type === 'testimony').length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-300 italic text-sm">Ainda sem testemunhos.</div>
-            ) : (
-              allRequests.filter(r => r.type === 'testimony').map(t => (
-                <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative">
-                  <div className="flex justify-between items-start mb-2">
-                    {t.title && <h4 className="font-black text-[#051c38] uppercase text-xs tracking-widest flex-1 pr-12">{safeRender(t.title)}</h4>}
-                    <button onClick={() => handleLike(t.id)} className="flex flex-col items-center gap-1 active:scale-125 transition-all">
-                      <div className="p-2 bg-pink-50 rounded-full text-pink-500">
-                        <Heart size={16} fill={t.likes > 0 ? "currentColor" : "none"} />
-                      </div>
-                      <span className="text-[10px] font-black text-pink-500">{t.likes || 0}</span>
-                    </button>
-                  </div>
-                  <p className="text-slate-700 italic text-sm leading-relaxed mb-6">"{safeRender(t.message)}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#051c38] text-white rounded-full flex items-center justify-center font-black text-[10px] uppercase">{t.name ? t.name[0] : 'A'}</div>
-                    <span className="font-black text-[10px] text-slate-500 uppercase tracking-widest">{t.isAnonymous ? 'Anônimo' : safeRender(t.name)}</span>
-                  </div>
+            {allRequests.filter(r => r.type === 'testimony').map(t => (
+              <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-black text-[#051c38] uppercase text-xs tracking-widest flex-1 pr-12">{safeRender(t.title)}</h4>
+                  <button onClick={() => handleLike(t.id)} className="flex flex-col items-center gap-1 active:scale-125 transition-all">
+                    <div className="p-2 bg-pink-50 rounded-full text-pink-500">
+                      <Heart size={16} fill={t.likes > 0 ? "currentColor" : "none"} />
+                    </div>
+                    <span className="text-[10px] font-black text-pink-500">{t.likes || 0}</span>
+                  </button>
                 </div>
-              ))
-            )}
+                <p className="text-slate-700 italic text-sm leading-relaxed mb-6">"{safeRender(t.message)}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-[#051c38] text-white rounded-full flex items-center justify-center font-black text-[10px] uppercase">{t.name ? t.name[0] : 'A'}</div>
+                  <span className="font-black text-[10px] text-slate-500 uppercase tracking-widest">{t.isAnonymous ? 'Anônimo' : safeRender(t.name)}</span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -638,9 +604,9 @@ export default function App() {
                   ))}
                 </div>
               </div>
-              <input type="text" placeholder="Horário sugerido (Ex: 15:00)" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.timeSlot} onChange={(e) => setFormData({...formData, timeSlot: e.target.value})} />
-              <textarea placeholder="Observações adicionais..." rows="3" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
-              <button onClick={() => handleSubmitRequest('visit')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold active:scale-95 transition-all mt-4">Agendar Visita</button>
+              <input type="text" placeholder="Horário sugerido" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium" value={formData.timeSlot} onChange={(e) => setFormData({...formData, timeSlot: e.target.value})} />
+              <textarea placeholder="Observações..." rows="3" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855]" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
+              <button onClick={() => handleSubmitRequest('visit')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-bold active:scale-95 transition-all mt-4 uppercase text-xs tracking-widest">Agendar</button>
             </div>
           </div>
         )}
@@ -650,7 +616,7 @@ export default function App() {
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 border border-slate-100 shadow-inner"><Lock size={40} /></div>
             <div className="space-y-2">
               <h2 className="text-2xl font-bold text-[#051c38]">Área Restrita</h2>
-              <p className="text-sm text-slate-400 font-medium">Introduza o código de acesso.</p>
+              <p className="text-sm text-slate-400 font-medium">Introduza o PIN de acesso.</p>
             </div>
             <input type="password" placeholder="••••" maxLength={4} className="text-center text-4xl tracking-[1em] w-full p-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] shadow-inner font-mono" value={adminPin} onChange={(e) => setAdminPin(e.target.value)} />
             <div className="flex gap-4">
@@ -666,7 +632,6 @@ export default function App() {
               <h2 className="font-bold text-sm text-[#051c38] uppercase tracking-wider">Gestão Pastoral</h2>
               <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full"><X size={20} /></button>
             </div>
-
             <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
               {['all', 'prayer', 'visit', 'testimony'].map(cat => (
                 <button key={cat} onClick={() => setFilterType(cat)} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${filterType === cat ? 'bg-[#051c38] text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'}`}>
@@ -674,13 +639,11 @@ export default function App() {
                 </button>
               ))}
             </div>
-
             <div className="space-y-4">
               {filteredRequests.map(req => {
                 let borderClass = 'border-slate-200';
                 let statusLabel = 'Pendente';
                 let statusBg = 'bg-slate-100 text-slate-500';
-
                 if (req.type === 'visit') {
                   if (req.status === 'pending') { borderClass = 'border-red-400'; statusLabel = 'Visita não confirmada'; statusBg = 'bg-red-50 text-red-600'; }
                   else if (req.status === 'confirmed') { borderClass = 'border-yellow-400'; statusLabel = 'Visita confirmada'; statusBg = 'bg-yellow-50 text-yellow-700'; }
@@ -689,48 +652,27 @@ export default function App() {
                   if (req.status === 'completed') { borderClass = 'border-green-400 opacity-60'; statusLabel = 'Concluído'; statusBg = 'bg-green-50 text-green-700'; }
                   else { borderClass = req.type === 'prayer' ? 'border-red-400' : 'border-amber-400'; }
                 }
-
                 return (
                   <div key={req.id} className={`bg-white rounded-3xl p-6 border-l-8 shadow-md relative transition-all ${borderClass}`}>
                     <div className="absolute top-4 right-4 flex gap-2">
                       <button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
                     </div>
-                    
                     <div className="mb-4">
                       <div className="flex items-center gap-2 mb-2">
                         <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${statusBg}`}>{statusLabel}</span>
-                        <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-slate-50 border border-slate-100 text-slate-400">{req.type === 'visit' ? 'Visita' : req.type === 'prayer' ? 'Oração' : 'Testemunho'}</span>
                       </div>
                       <h4 className="font-black text-slate-800 text-lg">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4>
                     </div>
-
-                    {(req.type === 'visit' || (req.type === 'prayer' && req.wantContact)) && (
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 mb-4 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Phone size={14} className="text-green-500" />
-                          <span className="text-sm font-bold text-slate-700">{safeRender(req.contact)}</span>
-                        </div>
-                        {req.type === 'visit' && (
-                          <div className="flex items-start gap-2">
-                            <MapPin size={14} className="text-slate-400 mt-1" />
-                            <span className="text-xs text-slate-600">{safeRender(req.address)}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-4 italic text-sm text-slate-600 leading-relaxed">
-                      "{safeRender(req.message)}"
-                    </div>
-
+                    {req.contact && <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1"><Phone size={12} /> {safeRender(req.contact)}</p>}
+                    <p className="text-sm text-slate-600 italic leading-relaxed mb-4">"{safeRender(req.message)}"</p>
                     <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-50">
                       {req.type === 'visit' ? (
                         <>
-                          {req.status === 'pending' && <button onClick={() => handleUpdateStatus(req.id, 'confirmed')} className="flex-1 py-2 bg-yellow-400 text-yellow-900 rounded-xl text-[10px] font-black uppercase tracking-widest">Confirmar</button>}
-                          <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="flex-1 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Concluir</button>
+                          {req.status === 'pending' && <button onClick={() => handleUpdateStatus(req.id, 'confirmed')} className="flex-1 py-2 bg-yellow-400 text-yellow-900 rounded-xl text-[10px] font-black uppercase">Confirmar</button>}
+                          <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="flex-1 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase">Concluir</button>
                         </>
                       ) : (
-                        req.status !== 'completed' && <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-2 bg-[#051c38] text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Finalizar</button>
+                        req.status !== 'completed' && <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-2 bg-[#051c38] text-white rounded-xl text-[10px] font-black uppercase">Finalizar</button>
                       )}
                     </div>
                   </div>
