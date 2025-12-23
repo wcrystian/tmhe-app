@@ -102,7 +102,6 @@ const Header = ({ isScrolled, onLoginClick, onLogoClick }) => (
        </button>
     </div>
 
-    {/* O contêiner da logo agora é clicável e redireciona para Nossa História */}
     <div 
       onClick={onLogoClick}
       className="flex flex-col items-center justify-center h-full px-4 overflow-hidden text-center cursor-pointer group/logo"
@@ -144,7 +143,7 @@ const LegalModal = ({ isOpen, onClose }) => {
         <div className="p-6 space-y-4 overflow-y-auto text-sm text-slate-600 leading-relaxed no-scrollbar">
           <section>
             <h4 className="font-bold text-[#051c38] mb-1">1. Coleta de Dados (LGPD)</h4>
-            <p>Ao utilizar nossos formulários, consente com a recolha do seu nome, contacto e endereço para fins de apoio espiritual e eclesiástico.</p>
+            <p>Ao utilizar nossos formulários, consente com a coleta do seu nome, contato e endereço para fins de apoio espiritual e eclesiástico.</p>
           </section>
           <section>
             <h4 className="font-bold text-[#051c38] mb-1">2. Sigilo Pastoral</h4>
@@ -152,10 +151,10 @@ const LegalModal = ({ isOpen, onClose }) => {
           </section>
           <section className="bg-amber-50 p-3 rounded-xl border border-amber-100">
             <h4 className="font-bold text-amber-800 mb-1 flex items-center gap-2"><Quote size={14} /> 3. Teor Público dos Testemunhos</h4>
-            <p className="text-amber-900 text-xs font-medium">Ao publicar uma mensagem na seção "Vitórias", o utilizador reconhece e aceita o seu **caráter público**. Estas mensagens destinam-se à edificação e encorajamento de todos os membros e visitantes da comunidade TMHE que acedam à aplicação.</p>
+            <p className="text-amber-900 text-xs font-medium">Ao publicar uma mensagem na seção "Vitórias", o usuário reconhece e aceita o seu **caráter público**. Estas mensagens destinam-se à edificação e encorajamento de todos os membros e visitantes da comunidade TMHE que acessem à aplicação.</p>
           </section>
           <section>
-            <h4 className="font-bold text-[#051c38] mb-1">4. Direitos do Utilizador</h4>
+            <h4 className="font-bold text-[#051c38] mb-1">4. Direitos do Usuário</h4>
             <p>Pode solicitar a remoção de qualquer conteúdo de sua autoria ou a retificação de dados através da nossa secretaria presencial.</p>
           </section>
         </div>
@@ -203,6 +202,22 @@ const ScheduleModal = ({ isOpen, onClose }) => {
         </div>
         <div className="p-6 bg-slate-50 border-t border-slate-100 text-center"><p className="text-[10px] text-slate-400 italic font-medium">"Alegrei-me quando me disseram: Vamos à casa do Senhor." (Salmos 122:1)</p></div>
       </div>
+    </div>
+  );
+};
+
+const Notification = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className={`fixed top-4 left-4 right-4 md:left-auto md:w-80 z-50 p-4 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce-in border ${
+      type === 'success' ? 'bg-green-600 border-green-500 text-white' : 'bg-red-600 border-red-500 text-white'
+    }`}>
+      {type === 'success' ? <CheckCircle2 size={24} className="shrink-0" /> : <X size={24} className="shrink-0" />}
+      <span className="font-bold text-sm leading-tight">{message}</span>
     </div>
   );
 };
@@ -371,7 +386,6 @@ export default function App() {
       <ScheduleModal isOpen={showSchedule} onClose={() => setShowSchedule(false)} />
       <LegalModal isOpen={showLegal} onClose={() => setShowLegal(false)} />
 
-      {/* Header com handler para redirecionar ao clicar na logo */}
       <Header 
         isScrolled={isScrolled} 
         onLoginClick={() => { setView('login'); window.scrollTo(0,0); }}
@@ -384,10 +398,10 @@ export default function App() {
           <div className="space-y-4 animate-fade-in">
             <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-[#cfa855]/5 rounded-bl-full -mr-8 -mt-8 transition-all group-hover:scale-110"></div>
-              <h2 className="text-xl font-bold text-[#051c38] mb-2 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-[#051c38] mb-2 flex items-center gap-2 text-left">
                 <Sparkles size={20} className="text-[#cfa855]" /> Bem-vindo
               </h2>
-              <p className="text-slate-500 text-sm leading-relaxed font-medium">Estamos prontos para o ouvir e orar contigo.</p>
+              <p className="text-slate-500 text-sm leading-relaxed font-medium text-left">Estamos prontos para o ouvir e orar contigo.</p>
             </div>
 
             <div className="grid grid-cols-1 gap-3">
@@ -396,7 +410,7 @@ export default function App() {
                   <div className="bg-red-50 p-3 rounded-xl text-red-500 group-hover:scale-110 transition-transform shrink-0"><Heart fill="currentColor" size={24} /></div>
                   <div className="text-left flex-1">
                     <h3 className="font-bold text-slate-800">Pedido de Oração</h3>
-                    <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">Partilhe o seu fardo</p>
+                    <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">Compartilhe o seu fardo</p>
                   </div>
                 </div>
                 <ChevronRight className="text-slate-300" />
@@ -496,9 +510,9 @@ export default function App() {
                     Nosso objetivo principal é ser a extensão do amor de Cristo no mundo. Buscamos não apenas realizar cultos, mas transformar vidas através do evangelismo prático e do suporte social e espiritual.
                   </p>
                   <div className="grid grid-cols-1 gap-3 mt-4">
-                    <div className="bg-slate-50 p-4 rounded-2xl flex items-start gap-3">
-                      <div className="p-2 bg-white rounded-xl shadow-sm"><Users size={16} className="text-[#051c38]" /></div>
-                      <div>
+                    <div className="bg-slate-50 p-4 rounded-2xl flex items-start gap-3 text-left">
+                      <div className="p-2 bg-white rounded-xl shadow-sm shrink-0"><Users size={16} className="text-[#051c38]" /></div>
+                      <div className="text-left flex-1">
                         <h4 className="font-bold text-xs text-[#051c38] uppercase mb-1">Comunidade</h4>
                         <p className="text-[11px] text-slate-500">Promover a união e o suporte mútuo entre os moradores.</p>
                       </div>
@@ -520,13 +534,13 @@ export default function App() {
               <button onClick={() => { setView('add-testimony'); window.scrollTo(0,0); }} className="bg-[#cfa855] text-white px-5 py-2.5 rounded-full text-xs font-black shadow-lg flex items-center gap-2 uppercase active:scale-95 transition-all shrink-0"><Plus size={16} /> Contar Vitória</button>
             </div>
             {allRequests.filter(r => r.type === 'testimony').length === 0 ? (
-              <div className="text-center py-20 text-slate-300 italic text-sm">Ainda sem testemunhos partilhados.</div>
+              <div className="text-center py-20 text-slate-300 italic text-sm">Ainda sem testemunhos compartilhados.</div>
             ) : (
               allRequests.filter(r => r.type === 'testimony').map(t => (
                 <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative text-left">
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-black text-[#051c38] uppercase text-xs tracking-widest flex-1 pr-12 text-left">{safeRender(t.title)}</h4>
-                    <button onClick={() => handleLike(t.id)} className="flex flex-col items-center gap-1 active:scale-125 transition-all">
+                    <button onClick={() => handleLike(t.id)} className="flex flex-col items-center gap-1 active:scale-125 transition-all shrink-0">
                       <div className="p-2 bg-pink-50 rounded-full text-pink-500"><Heart size={16} fill={t.likes > 0 ? "currentColor" : "none"} /></div>
                       <span className="text-[10px] font-black text-pink-500">{t.likes || 0}</span>
                     </button>
@@ -549,7 +563,7 @@ export default function App() {
           <div className="bg-white p-8 rounded-3xl shadow-2xl animate-slide-up border border-slate-100 text-left">
             <div className="flex items-center gap-2 mb-8 text-left">
               <button onClick={() => setView('testimonies')} className="p-2 -ml-2 text-slate-400"><X size={20} /></button>
-              <h2 className="text-xl font-black text-[#051c38] uppercase">Partilhar Vitória</h2>
+              <h2 className="text-xl font-black text-[#051c38] uppercase">Compartilhar Vitória</h2>
             </div>
             <div className="space-y-5">
               <input type="text" placeholder="Seu Nome" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
@@ -572,7 +586,7 @@ export default function App() {
             </div>
             <div className="space-y-5">
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <input type="checkbox" id="anon-p" checked={formData.isAnonymous} onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg" />
+                <input type="checkbox" id="anon-p" checked={formData.isAnonymous} onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg shrink-0" />
                 <label htmlFor="anon-p" className="text-sm font-bold text-slate-600 cursor-pointer">Enviar de forma Anônima</label>
               </div>
               {!formData.isAnonymous && (
@@ -619,7 +633,7 @@ export default function App() {
 
         {view === 'login' && (
           <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-8 animate-fade-in mt-10">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 border border-slate-100 shadow-inner"><Lock size={40} /></div>
+            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 border border-slate-100 shadow-inner shrink-0"><Lock size={40} /></div>
             <h2 className="text-2xl font-bold text-[#051c38]">Acesso Pastoral</h2>
             <input type="password" placeholder="••••" maxLength={4} className="text-center text-4xl tracking-[1em] w-full p-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] shadow-inner font-mono" value={adminPin} onChange={(e) => setAdminPin(e.target.value)} />
             <div className="flex gap-4">
@@ -632,19 +646,23 @@ export default function App() {
         {view === 'admin' && isAdmin && (
           <div className="space-y-5 animate-fade-in text-left">
             <div className="flex items-center justify-between bg-white p-5 rounded-3xl shadow-md border border-slate-100">
-              <h2 className="font-bold text-sm text-[#051c38] uppercase tracking-wider">Gestão</h2>
+              <h2 className="font-bold text-sm text-[#051c38] uppercase tracking-wider">Gestão Pastoral</h2>
               <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full"><X size={20} /></button>
             </div>
             <div className="space-y-4">
-              {allRequests.map(req => (
-                <div key={req.id} className={`bg-white rounded-3xl p-6 border-l-8 shadow-md relative transition-all text-left ${req.status === 'completed' ? 'border-green-400 opacity-60' : 'border-red-400'}`}>
-                  <div className="absolute top-4 right-4 flex gap-2"><button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button></div>
-                  <h4 className="font-black text-slate-800 text-lg mb-2 text-left">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4>
-                  <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1"><Phone size={12} /> {safeRender(req.contact)}</p>
-                  <p className="text-sm text-slate-600 italic leading-relaxed mb-4 text-left">"{safeRender(req.message)}"</p>
-                  <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-2 bg-[#051c38] text-white rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">Finalizar</button>
-                </div>
-              ))}
+              {allRequests.length === 0 ? (
+                <div className="text-center py-20 text-slate-300 italic text-sm">Sem novos pedidos ou testemunhos.</div>
+              ) : (
+                allRequests.map(req => (
+                  <div key={req.id} className={`bg-white rounded-3xl p-6 border-l-8 shadow-md relative transition-all text-left ${req.status === 'completed' ? 'border-green-400 opacity-60' : 'border-red-400'}`}>
+                    <div className="absolute top-4 right-4 flex gap-2"><button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button></div>
+                    <h4 className="font-black text-slate-800 text-lg mb-2 text-left">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4>
+                    <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1"><Phone size={12} /> {safeRender(req.contact)}</p>
+                    <p className="text-sm text-slate-600 italic leading-relaxed mb-4 text-left">"{safeRender(req.message)}"</p>
+                    <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-2 bg-[#051c38] text-white rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">Finalizar</button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -656,7 +674,7 @@ export default function App() {
         </button>
         <button onClick={handleShare} className="flex flex-col items-center gap-1.5 text-slate-400 active:scale-110 hover:text-[#cfa855]">
           <div className="bg-[#cfa855]/10 p-2 rounded-xl text-[#cfa855]"><Share2 size={26} /></div>
-          <span className="text-[9px] font-bold uppercase tracking-widest">Partilhar</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-center">Compartilhar</span>
         </button>
         <button onClick={() => { setView('history'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'history' ? 'text-[#051c38] scale-110' : 'text-slate-400 hover:text-[#051c38]'}`}>
           <Church size={26} />
