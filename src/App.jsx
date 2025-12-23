@@ -102,7 +102,7 @@ const Header = ({ isScrolled, onLoginClick }) => (
        </button>
     </div>
 
-    <div className="flex flex-col items-center justify-center h-full px-4 overflow-hidden">
+    <div className="flex flex-col items-center justify-center h-full px-4 overflow-hidden text-center">
       <div className={`relative flex items-center justify-center transition-all duration-500 ease-out transform ${isScrolled ? 'scale-0 h-0 opacity-0' : 'scale-100 h-28 w-28 mb-3 opacity-100'}`}>
         <div className="absolute inset-0 border-2 border-[#cfa855] rounded-full animate-pulse"></div>
         <img
@@ -113,7 +113,7 @@ const Header = ({ isScrolled, onLoginClick }) => (
         />
       </div>
       
-      <div className="text-center transition-all duration-500 ease-out">
+      <div className="transition-all duration-500 ease-out">
         <h1 className={`font-bold tracking-wider text-white transition-all duration-500 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>
           TMHE
         </h1>
@@ -140,15 +140,19 @@ const LegalModal = ({ isOpen, onClose }) => {
         <div className="p-6 space-y-4 overflow-y-auto text-sm text-slate-600 leading-relaxed text-left no-scrollbar">
           <section>
             <h4 className="font-bold text-[#051c38] mb-1">1. Coleta de Dados (LGPD)</h4>
-            <p>Ao utilizar nossos formulários, você consente com a coleta de seu nome, contato e endereço. Estes são dados necessários para a finalidade de apoio espiritual e eclesiástico solicitado.</p>
+            <p>Ao utilizar nossos formulários, consente com a recolha do seu nome, contacto e endereço para fins de apoio espiritual e eclesiástico.</p>
           </section>
           <section>
-            <h4 className="font-bold text-[#051c38] mb-1">2. Finalidade e Sigilo</h4>
-            <p>Os dados são de uso exclusivo do Templo Missionário Há Esperança (TMHE). Garantimos o sigilo pastoral e não compartilhamos suas informações com terceiros para fins comerciais.</p>
+            <h4 className="font-bold text-[#051c38] mb-1">2. Sigilo Pastoral</h4>
+            <p>Pedidos de oração e solicitações de visita são tratados com estrito sigilo interno pela liderança do Templo Missionário Há Esperança.</p>
+          </section>
+          <section className="bg-amber-50 p-3 rounded-xl border border-amber-100">
+            <h4 className="font-bold text-amber-800 mb-1 flex items-center gap-2"><Quote size={14} /> 3. Teor Público dos Testemunhos</h4>
+            <p className="text-amber-900 text-xs font-medium">Ao publicar uma mensagem na secção "Vitórias", o utilizador reconhece e aceita o seu **caráter público**. Estas mensagens destinam-se à edificação e encorajamento de todos os membros e visitantes da comunidade TMHE que acedam à aplicação.</p>
           </section>
           <section>
-            <h4 className="font-bold text-[#051c38] mb-1">3. Proteção de Conteúdo</h4>
-            <p>Qualquer conteúdo compartilhado nesta plataforma visa a edificação e comunhão da igreja, respeitando a sua privacidade conforme as opções selecionadas.</p>
+            <h4 className="font-bold text-[#051c38] mb-1">4. Direitos do Utilizador</h4>
+            <p>Pode solicitar a remoção de qualquer conteúdo de sua autoria ou a retificação de dados através da nossa secretaria presencial.</p>
           </section>
         </div>
         <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-center">
@@ -310,7 +314,6 @@ export default function App() {
     if (!formData.message && type !== 'visit') return notify('Escreva a sua mensagem.', 'error');
     if (type === 'visit' && (!formData.name || !formData.contact || !formData.address)) return notify('Preencha os campos obrigatórios.', 'error');
     if (type === 'testimony' && (!formData.name || !formData.title || !formData.message)) return notify('Preencha os campos obrigatórios.', 'error');
-    if (type === 'prayer' && formData.wantContact && !formData.contact) return notify('Informe o WhatsApp.', 'error');
     
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'requests'), {
@@ -393,7 +396,6 @@ export default function App() {
                 </div>
                 <ChevronRight className="text-slate-300" />
               </button>
-              {/* Botão de Testemunhos Restaurado na Home */}
               <button onClick={() => { setView('testimonies'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group">
                 <div className="flex items-center gap-4">
                   <div className="bg-amber-50 p-3 rounded-xl text-amber-600 group-hover:scale-110 transition-transform"><Quote size={24} /></div>
@@ -486,10 +488,6 @@ export default function App() {
                   </div>
                </section>
             </div>
-            
-            <p className="text-[10px] text-slate-400 text-center uppercase font-black tracking-widest pt-4">
-              "Para que todos sejam um" (João 17:21)
-            </p>
           </div>
         )}
 
@@ -513,8 +511,8 @@ export default function App() {
                   </div>
                   <p className="text-slate-700 italic text-sm leading-relaxed mb-6">"{safeRender(t.message)}"</p>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#051c38] text-white rounded-full flex items-center justify-center font-black text-[10px] uppercase">{t.name ? t.name[0] : 'A'}</div>
-                    <span className="font-black text-[10px] text-slate-500 uppercase tracking-widest">{t.isAnonymous ? 'Anônimo' : safeRender(t.name)}</span>
+                    <div className="w-8 h-8 bg-[#051c38] text-white rounded-full flex items-center justify-center font-black text-[10px] uppercase">{(t.name && t.name[0]) || 'A'}</div>
+                    <span className="font-black text-[10px] text-slate-500 uppercase tracking-widest">{t.isAnonymous ? 'Anónimo' : safeRender(t.name)}</span>
                   </div>
                 </div>
               ))
@@ -535,6 +533,10 @@ export default function App() {
               <input type="text" placeholder="Seu Nome" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               <input type="text" placeholder="Título da Vitória" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
               <textarea placeholder="O que Deus fez na sua vida?" rows="6" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#cfa855] font-medium leading-relaxed" value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})}></textarea>
+              <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                <Info size={18} className="text-amber-600 shrink-0" />
+                <p className="text-[10px] text-amber-900 font-medium">Nota: Testemunhos são públicos e visíveis para toda a comunidade.</p>
+              </div>
               <button onClick={() => handleSubmitRequest('testimony')} className="w-full bg-[#cfa855] text-white p-4 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all mt-4">Publicar</button>
             </div>
           </div>
@@ -549,7 +551,7 @@ export default function App() {
             <div className="space-y-5">
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                 <input type="checkbox" id="anon-p" checked={formData.isAnonymous} onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg" />
-                <label htmlFor="anon-p" className="text-sm font-bold text-slate-600 cursor-pointer">Enviar de forma Anônima</label>
+                <label htmlFor="anon-p" className="text-sm font-bold text-slate-600 cursor-pointer">Enviar de forma Anónima</label>
               </div>
               {!formData.isAnonymous && (
                 <div className="space-y-1">
@@ -564,7 +566,7 @@ export default function App() {
               <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
                 <div className="flex items-center gap-3">
                   <input type="checkbox" id="want-contact" checked={formData.wantContact} onChange={(e) => setFormData({...formData, wantContact: e.target.checked})} className="w-5 h-5 accent-[#cfa855] rounded-lg shrink-0" />
-                  <label htmlFor="want-contact" className="text-sm font-bold text-slate-600 cursor-pointer">Gostaria de contato?</label>
+                  <label htmlFor="want-contact" className="text-sm font-bold text-slate-600 cursor-pointer">Gostaria de contacto?</label>
                 </div>
                 {formData.wantContact && (
                   <input type="tel" placeholder="(21) 98765-4321" className="w-full p-4 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#cfa855] font-bold" value={formData.contact} onChange={handleWhatsAppChange} />
@@ -612,10 +614,10 @@ export default function App() {
               <button onClick={() => setView('home')} className="p-2 text-red-500 hover:bg-red-50 rounded-full"><X size={20} /></button>
             </div>
             <div className="space-y-4">
-              {allRequests.filter(r => filterType === 'all' || r.type === filterType).map(req => (
+              {allRequests.map(req => (
                 <div key={req.id} className={`bg-white rounded-3xl p-6 border-l-8 shadow-md relative transition-all ${req.status === 'completed' ? 'border-green-400 opacity-60' : 'border-red-400'}`}>
                   <div className="absolute top-4 right-4 flex gap-2"><button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button></div>
-                  <h4 className="font-black text-slate-800 text-lg mb-2">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4>
+                  <h4 className="font-black text-slate-800 text-lg mb-2">{req.isAnonymous ? 'Anónimo' : safeRender(req.name)}</h4>
                   <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1"><Phone size={12} /> {safeRender(req.contact)}</p>
                   <p className="text-sm text-slate-600 italic leading-relaxed mb-4">"{safeRender(req.message)}"</p>
                   <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-2 bg-[#051c38] text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Finalizar</button>
@@ -626,7 +628,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Navegação Inferior Atualizada: Início | Partilhar | Nossa História (Igreja) */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-100 px-6 py-4 flex justify-around items-center z-40 shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.1)]">
         <button onClick={() => { setView('home'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'home' ? 'text-[#051c38] scale-110' : 'text-slate-400'}`}>
           <Home size={26} /><span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
