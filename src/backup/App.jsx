@@ -561,7 +561,7 @@ export default function App() {
             <div className="bg-white p-4 rounded-3xl shadow-xl border border-slate-100 overflow-hidden text-left">
                <h3 className="text-sm font-bold text-[#051c38] mb-3 flex items-center gap-2 uppercase tracking-widest px-2"><MapPin size={16} className="text-[#cfa855]" /> Localização</h3>
                <div className="rounded-2xl overflow-hidden border border-slate-50 h-[220px] w-full bg-slate-50 relative">
-                  <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d266.352304462434!2d-43.33688119999806!3d-22.822559745632812!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e1!3m2!1spt-BR!2sbr!4v1766371878086!5m2!1spt-BR!2sbr" width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" loading="lazy"></iframe>
+                  <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d316.74789674764503!2d-43.33668071699493!3d-22.8226280113004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9965001030609d%3A0x1b9ec7a2e77b54a8!2sTMHE%20-%20Templo%20Mission%C3%A1rio%20H%C3%A1%20Esperan%C3%A7a!5e1!3m2!1spt-BR!2sbr!4v1766614959017!5m2!1spt-BR!2sbr" width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" loading="lazy"></iframe>
                </div>
                <div className="mt-4 text-center pb-2">
                   <a href="https://maps.app.goo.gl/7qi7anN314nEYmVg7" target="_blank" rel="noopener noreferrer" className="text-[10px] font-black text-[#cfa855] flex items-center justify-center gap-2 uppercase tracking-tighter hover:underline transition-all">Clique aqui e chegue até nós <ExternalLink size={10} /></a>
