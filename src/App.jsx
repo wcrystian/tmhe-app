@@ -58,13 +58,10 @@ import {
   ScrollText,
   BarChart3,
   Eye
-<<<<<<< HEAD
   Flame,
   sun,
   ArrowRight,
   ChevronLeft,
-=======
->>>>>>> 4697b7b1200c22ed39501a425298a7a650ecddfb
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO E SEGURANÇA ---
