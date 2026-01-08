@@ -449,29 +449,6 @@ export default function App() {
     printWindow.document.close();
   };
 
-export default function App() {
-  // 1. Crie o estado (coloque logo no início da função)
-  const [mostrarFluxo, setMostrarFluxo] = useState(true);
-
-  return (
-    <div>
-      {/* 2. Crie um botão para abrir o fluxo */}
-      <button onClick={() => setMostrarFluxo(true)}>
-        Ver Mensagem de Esperança
-      </button>
-
-      {/* 3. Coloque o componente aqui (ele só aparece quando mostrarFluxo for true) */}
-      <FluxoInterativoEsperanca 
-        isOpen={mostrarFluxo} 
-        onClose={() => setMostrarFluxo(false)} 
-        onFinish={() => {
-          setMostrarFluxo(false);
-          // Ação após o fim (ex: abrir formulário)
-        }} 
-      />
-    </div>
-  );
-}
 
   const handleSubmitRequest = async (type) => {
     if (type === 'prayer' && !formData.message) return notify('Escreva seu pedido de oração.', 'error');
@@ -580,6 +557,27 @@ export default function App() {
                   Bem-vindo
               </h2>
               <p className="text-slate-500 text-sm leading-relaxed font-medium text-left">Estamos prontos para o ouvir e orar contigo.</p>
+			  export default function App() {
+  // 1. Crie o estado (coloque logo no início da função)
+  const [mostrarFluxo, setMostrarFluxo] = useState(true);
+
+  return (
+    <div>
+      {/* 2. Crie um botão para abrir o fluxo */}
+      <button onClick={() => setMostrarFluxo(true)}>
+        Ver Mensagem de Esperança
+      </button>
+
+      {/* 3. Coloque o componente aqui (ele só aparece quando mostrarFluxo for true) */}
+      <FluxoInterativoEsperanca 
+        isOpen={mostrarFluxo} 
+        onClose={() => setMostrarFluxo(false)} 
+        onFinish={() => {
+          setMostrarFluxo(false);
+          // Ação após o fim (ex: abrir formulário)
+        }} 
+      />
+    </div>
             </div>
 
             <div className="grid grid-cols-1 gap-3">
