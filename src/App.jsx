@@ -451,7 +451,7 @@ export default function App() {
 
 export default function App() {
   // 1. Crie o estado (coloque logo no início da função)
-  const [mostrarFluxo, setMostrarFluxo] = useState(false);
+  const [mostrarFluxo, setMostrarFluxo] = useState(true);
 
   return (
     <div>
