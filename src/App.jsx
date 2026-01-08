@@ -557,8 +557,7 @@ export default function App() {
                   Bem-vindo
               </h2>
               <p className="text-slate-500 text-sm leading-relaxed font-medium text-left">Estamos prontos para o ouvir e orar contigo.</p>
-			  export default function App() {
-  // 1. Crie o estado (coloque logo no início da função)
+			  <div> export default function App() {
   const [mostrarFluxo, setMostrarFluxo] = useState(true);
 
   return (
@@ -578,7 +577,8 @@ export default function App() {
         }} 
       />
     </div>
-            </div>
+			  </div>
+			            </div>
 
             <div className="grid grid-cols-1 gap-3">
               <button onClick={() => { setView('prayer'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
