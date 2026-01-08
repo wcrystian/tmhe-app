@@ -1,0 +1,11 @@
+4. Como atualizar o site online (GitHub -> Vercel)
+
+Depois de salvar as alterações no seu computador, abra o terminal na pasta do projeto e digite estes 3 comandos:
+
+git add . (Prepara as mudanças)
+
+git commit -m "Ajuste de logo e espacos" (Dá um nome à atualização)
+
+git push origin main (Envia para o GitHub)
+
+A Vercel vai detetar o envio e atualizar o seu site (https://tmhe.vercel.app) sozinha em 30 segundos!
