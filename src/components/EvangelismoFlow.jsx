@@ -14,6 +14,14 @@ import {
  * Pode ser inserido em qualquer página React que utilize Tailwind CSS.
  */
 
+function CrossIcon({ className }) {
+  return (
+    <svg className={className} width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2v20M8 8h8" />
+    </svg>
+  );
+}
+
 const GOSPEL_STEPS = [
   { 
     title: "Deus te Ama", 
@@ -44,14 +52,6 @@ const GOSPEL_STEPS = [
     icon: <Sun size={48} className="text-amber-500" /> 
   }
 ];
-
-function CrossIcon({ className }) {
-  return (
-    <svg className={className} width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2v20M8 8h8" />
-    </svg>
-  );
-}
 
 export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) {
   const [step, setStep] = useState(0);
