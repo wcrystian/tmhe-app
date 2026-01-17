@@ -586,15 +586,15 @@ export default function App() {
     </svg>
   );
 }}
- <div className="grid grid-cols-1 gap-3">
-              <button onClick={() => { setView('prayer'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
-                <div className="flex items-center gap-4 text-left">
-                  <div className="bg-red-50 p-3 rounded-xl text-red-500 group-hover:scale-110 transition-transform shrink-0"><Heart fill="currentColor" size={24} /></div>
-                  <div className="text-left flex-1">
-                    <h3 className="font-bold text-slate-800 uppercase tracking-tight text-left">fluxo evangelistico</h3>
-                    <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider text-left">Compartilhe o seu fardo</p>
-                  </div>
-                </div>
+<div className="grid grid-cols-1 gap-3">
+  <button onClick={() => { setView('prayer'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
+    <div className="flex items-center gap-4 text-left">
+        <div className="bg-red-50 p-3 rounded-xl text-red-500 group-hover:scale-110 transition-transform shrink-0"><Heart fill="currentColor" size={24} /></div>
+          <div className="text-left flex-1">
+            <h3 className="font-bold text-slate-800 uppercase tracking-tight text-left">fluxo evangelistico</h3>
+            <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider text-left">Compartilhe o seu fardo</p>
+        </div>
+    </div>
   
 {/* Modifique aqui para alterar os passos, textos, versículos e títulos do Fluxo de Evangelismo */}
 {/* const GOSPEL_STEPS = [
