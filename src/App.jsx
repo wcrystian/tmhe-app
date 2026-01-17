@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
+// Modifique aqui se precisar alterar o caminho do componente FluxoInterativoEsperanca, ou remova se ele estiver definido neste mesmo arquivo
 import FluxoInterativoEsperanca from './components/EvangelismoFlow';
 import { 
   getAuth, 
@@ -46,26 +47,27 @@ import {
   Sparkles, 
   Wand2, 
   Share2, 
-  CalendarCheck,
-  Info,
-  ShieldCheck,
-  Scale,
-  History,
-  Target,
-  Users,
-  Church,
-  Printer,
-  ScrollText,
-  BarChart3,
-  Eye
+  CalendarCheck, 
+  Info, 
+  ShieldCheck, 
+  Scale, 
+  History, 
+  Target, 
+  Users, 
+  Church, 
+  Printer, 
+  ScrollText, 
+  BarChart3, 
+  Eye, // Modifique aqui: Note que havia um erro de sintaxe no original (falta de vírgula entre Eye e Flame)
   Flame,
-  sun,
-  ArrowRight,
-  ChevronLeft,
+  Sun, // Modifique aqui: Corrigido typo 'sun' para 'Sun' para corresponder ao uso no JSX
+  ArrowRight, 
+  ChevronLeft, 
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO E SEGURANÇA ---
 
+// Modifique aqui para alterar as credenciais de conexão com o banco de dados Firebase
 const getFirebaseConfig = () => {
   try {
     if (typeof __firebase_config !== 'undefined' && __firebase_config) {
@@ -101,6 +103,7 @@ const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'tmhe-church-app';
 const appId = rawAppId.replace(/\//g, '_');
 
 // --- DADOS ESTÁTICOS: VERSÍCULOS ---
+// Modifique aqui para adicionar, remover ou editar os versículos que aparecem diariamente
 const BIBLE_VERSES = [
   { text: "O Senhor é o meu pastor; nada me faltará.", ref: "Salmos 23:1" },
   { text: "Posso todas as coisas naquele que me fortalece.", ref: "Filipenses 4:13" },
@@ -114,6 +117,7 @@ const BIBLE_VERSES = [
 
 // --- COMPONENTES AUXILIARES ---
 
+// Modifique aqui para alterar o layout do Cabeçalho (Header), cores ou comportamento
 const Header = ({ isScrolled, onLoginClick, onLogoClick, pendingCount }) => (
   <header className={`bg-[#051c38] text-white shadow-2xl rounded-b-[2.5rem] sticky top-0 z-30 border-b border-[#cfa855]/20 transition-all duration-500 ease-in-out ${isScrolled ? 'h-20 shadow-lg' : 'h-56'}`}>
     <div className="absolute top-4 right-4 z-40">
@@ -134,6 +138,7 @@ const Header = ({ isScrolled, onLoginClick, onLogoClick, pendingCount }) => (
       onClick={onLogoClick}
       className="flex flex-col items-center justify-center h-full px-4 overflow-hidden text-center cursor-pointer group/logo"
     >
+      {/* Modifique aqui para alterar a imagem do Logo */}
       <div className={`relative flex items-center justify-center transition-all duration-500 ease-out transform group-active/logo:scale-95 ${isScrolled ? 'scale-0 h-0 opacity-0' : 'scale-100 h-28 w-28 mb-3 opacity-100'}`}>
         <div className="absolute inset-0 border-2 border-[#cfa855] rounded-full animate-pulse group-hover/logo:border-white transition-colors"></div>
         <img
@@ -144,6 +149,7 @@ const Header = ({ isScrolled, onLoginClick, onLogoClick, pendingCount }) => (
         />
       </div>
       
+      {/* Modifique aqui para alterar o Nome da Igreja e o Subtítulo no cabeçalho */}
       <div className="transition-all duration-500 ease-out">
         <h1 className={`font-bold tracking-wider text-white transition-all duration-500 group-hover/logo:text-[#cfa855] ${isScrolled ? 'text-xl' : 'text-2xl'}`}>
           TMHE
@@ -156,6 +162,7 @@ const Header = ({ isScrolled, onLoginClick, onLogoClick, pendingCount }) => (
   </header>
 );
 
+// Modifique aqui para alterar o texto dos Termos de Uso e Política de Privacidade (LGPD)
 const LegalModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
   return (
@@ -194,6 +201,7 @@ const LegalModal = ({ isOpen, onClose }) => {
   );
 };
 
+// Modifique aqui para alterar os dias, nomes e horários dos cultos/eventos
 const ScheduleModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
   const schedules = [
@@ -228,15 +236,17 @@ const ScheduleModal = ({ isOpen, onClose }) => {
             </div>
           ))}
         </div>
+        {/* Modifique aqui para alterar o versículo do rodapé do modal de horários */}
         <div className="p-6 bg-slate-50 border-t border-slate-100 text-center"><p className="text-[10px] text-slate-400 italic font-medium">"Alegrei-me quando me disseram: Vamos à casa do Senhor." (Salmos 122:1)</p></div>
       </div>
     </div>
   );
 };
 
+// Modifique aqui para alterar o tempo de exibição ou estilo das notificações
 const Notification = ({ message, type, onClose }) => {
   useEffect(() => {
-    const timer = setTimeout(onClose, 6000);
+    const timer = setTimeout(onClose, 6000); // 6000ms = 6 segundos
     return () => clearTimeout(timer);
   }, [onClose]);
 
@@ -268,10 +278,10 @@ export default function App() {
   const [showSchedule, setShowSchedule] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  
+   
   const isConfigPlaceholder = firebaseConfig.apiKey === "SUA_API_KEY_AQUI";
   const [configMissing, setConfigMissing] = useState(isConfigPlaceholder);
-  
+   
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPin, setAdminPin] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -309,6 +319,7 @@ export default function App() {
   }, [configMissing]);
 
   // Melhoria: Rastrear acesso único por sessão
+  // Modifique aqui para alterar a lógica de contagem de acessos (Analytics)
   useEffect(() => {
     if (!user || configMissing) return;
     
@@ -383,6 +394,7 @@ export default function App() {
     setFormData({ ...formData, preferredDays: days });
   };
 
+  // Modifique aqui para alterar o texto ou link compartilhado na função de compartilhamento
   const handleShare = async () => {
     const url = window.location.href;
     const shareData = { title: 'TMHE', text: 'Conheça o aplicativo do TMHE.', url: url };
@@ -409,6 +421,7 @@ export default function App() {
     } catch (err) { console.error("Erro ao curtir:", err); }
   };
 
+  // Modifique aqui para alterar o layout, CSS ou informações que aparecem na impressão da Ficha de Visita
   const handlePrintVisit = (req) => {
     const printWindow = window.open('', '_blank');
     const htmlContent = `
@@ -446,7 +459,7 @@ export default function App() {
     printWindow.document.close();
   };
 
-
+  // Modifique aqui para alterar a validação e lógica de envio dos formulários
   const handleSubmitRequest = async (type) => {
     if (type === 'prayer' && !formData.message) return notify('Escreva seu pedido de oração.', 'error');
     if (type === 'visit' && (!formData.name || !formData.contact || !formData.address || formData.preferredDays.length === 0 || !formData.timeSlot)) {
@@ -491,6 +504,7 @@ export default function App() {
     } catch (err) { notify('Erro ao eliminar registro.', 'error'); }
   };
 
+  // Modifique aqui para alterar o PIN (Senha) de acesso à área administrativa
   const checkAdmin = () => {
     if (adminPin === '1234') { 
       setIsAdmin(true); setView('admin'); setAdminPin('');
@@ -529,6 +543,7 @@ export default function App() {
         {view === 'home' && (
           <div className="space-y-4 animate-fade-in text-left">
             
+            {/* Modifique aqui para alterar o estilo ou layout do Card do Versículo do Dia */}
             <div className="bg-gradient-to-br from-[#051c38] to-[#0a2e5c] p-6 rounded-[2.5rem] shadow-xl border border-[#cfa855]/20 relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform duration-500">
                 <ScrollText size={80} className="text-white" />
@@ -548,23 +563,32 @@ export default function App() {
               </div>
             </div>
 
+            {/* Modifique aqui para alterar a mensagem de boas-vindas */}
             <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden group text-left">
               <div className="absolute top-0 right-0 w-24 h-24 bg-[#cfa855]/5 rounded-bl-full -mr-8 -mt-8 transition-all group-hover:scale-110"></div>
               <h2 className="text-xl font-bold text-[#051c38] mb-2 flex items-center gap-2 text-left">
                   Bem-vindo
               </h2>
               <p className="text-slate-500 text-sm leading-relaxed font-medium text-left">Estamos prontos para o ouvir e orar contigo.</p>
-				// ---- FLOW  ----
+                
+                {/* OBSERVAÇÃO IMPORTANTE: 
+                  O código abaixo (CrossIcon, GOSPEL_STEPS, FluxoInterativoEsperanca) está definido dentro do JSX/Retorno do componente App, o que é sintaticamente incorreto e pode causar erros.
+                  Recomenda-se mover estas funções e constantes para fora do componente App (antes do export default function App).
+                */}
+                
+                {/* // ---- FLOW  ---- */}
 
-				function CrossIcon({ className }) {
+                {/* Modifique aqui para alterar o ícone da cruz */}
+                {function CrossIcon({ className }) {
   return (
     <svg className={className} width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2v20M8 8h8" />
     </svg>
   );
-}
+}}
 
-const GOSPEL_STEPS = [
+{/* Modifique aqui para alterar os passos, textos, versículos e títulos do Fluxo de Evangelismo */}
+{/* const GOSPEL_STEPS = [
   { 
     title: "Deus te Ama", 
     text: "Você não é um acidente. Deus te criou com propósito e te ama incondicionalmente, independente do seu passado.", 
@@ -593,9 +617,10 @@ const GOSPEL_STEPS = [
     ref: "Apocalipse 3:20",
     icon: <Sun size={48} className="text-amber-500" /> 
   }
-];
+]; */}
 
-export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) {
+{/* Modifique aqui para alterar a lógica ou visualização do Modal de Evangelismo */}
+{/* export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) {
   const [step, setStep] = useState(0);
 
   if (!isOpen) return null;
@@ -604,7 +629,7 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
 
   return (
     <div className="fixed inset-0 z-[999] bg-[#051c38] text-white flex flex-col animate-in fade-in duration-500">
-      {/* Botão Fechar */}
+      
       <button 
         onClick={onClose} 
         className="absolute top-8 right-8 text-white/30 hover:text-white transition-colors"
@@ -613,19 +638,19 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
       </button>
 
       <div className="flex-1 flex flex-col justify-center items-center text-center p-8">
-        {/* Ícone com Animação */}
+        
         <div className="w-32 h-32 bg-white/5 rounded-full flex items-center justify-center mb-8 animate-pulse">
            {current.icon}
         </div>
 
-        {/* Conteúdo de Texto */}
+        
         <div className="max-w-md space-y-6">
           <div className="space-y-2">
             <h2 className="text-4xl font-black tracking-tight">{current.title}</h2>
             <p className="text-lg text-white/80 leading-relaxed">{current.text}</p>
           </div>
 
-          {/* Cartão do Versículo */}
+          
           <div className="bg-white/10 p-6 rounded-3xl border border-white/10 backdrop-blur-sm text-left relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
               <BookOpen size={80} />
@@ -640,9 +665,9 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
         </div>
       </div>
 
-      {/* Controles de Navegação */}
+      
       <div className="p-8 max-w-md mx-auto w-full space-y-6">
-        {/* Indicadores de Progresso */}
+        
         <div className="flex gap-2 justify-center">
            {GOSPEL_STEPS.map((_, i) => (
              <div 
@@ -683,10 +708,13 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
         .animate-in { animation: fade-in 0.5s ease-out; }
       `}} />
     </div>
-				// ---- FIM FLOW ----
-				
-			            </div>
+  );
+} */}
+                {/* // ---- FIM FLOW ---- */}
+                
+            </div>
 
+            {/* Modifique aqui para alterar os botões do menu principal (Pedido de Oração, Visita, Testemunhos) */}
             <div className="grid grid-cols-1 gap-3">
               <button onClick={() => { setView('prayer'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
                 <div className="flex items-center gap-4 text-left">
@@ -720,6 +748,7 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
               </button>
             </div>
 
+            {/* Modifique aqui para alterar o botão de Horários de Culto */}
             <button onClick={() => setShowSchedule(true)} className="w-full bg-[#051c38] p-5 rounded-2xl shadow-lg border border-[#cfa855]/30 flex items-center justify-between group overflow-hidden relative mt-6">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
               <div className="flex items-center gap-4 z-10 text-left">
@@ -729,6 +758,7 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
               <Info className="text-[#cfa855] z-10" size={20} />
             </button>
 
+            {/* Modifique aqui para alterar o mapa de localização (iframe) */}
             <div className="bg-white p-4 rounded-3xl shadow-xl border border-slate-100 overflow-hidden text-left">
                <h3 className="text-sm font-bold text-[#051c38] mb-3 flex items-center gap-2 uppercase tracking-widest px-2 text-left"><MapPin size={16} className="text-[#cfa855]" /> Localização</h3>
                <div className="rounded-2xl overflow-hidden border border-slate-50 h-[220px] w-full bg-slate-50 relative">
@@ -739,6 +769,7 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
                </div>
             </div>
 
+            {/* Modifique aqui para alterar o rodapé, assinatura pastoral e direitos autorais */}
             <footer className="mt-8 pt-8 pb-12 border-t border-slate-200">
                <div className="flex flex-col items-center gap-4 text-center">
                   <div className="w-full flex justify-between items-end border-l-4 border-[#cfa855] pl-4 py-1 text-left">
@@ -766,6 +797,7 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
               <h2 className="text-2xl font-black text-[#051c38] uppercase tracking-tighter text-left">Nossa História</h2>
             </div>
 
+            {/* Modifique aqui para editar o texto e seções da página "Nossa História" */}
             <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 space-y-8 relative overflow-hidden text-left">
                <div className="absolute top-0 right-0 w-32 h-32 bg-[#cfa855]/5 rounded-bl-full -mr-16 -mt-16"></div>
                <section className="space-y-4 relative z-10 text-left">
@@ -803,6 +835,7 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
             {allRequests.filter(r => r.type === 'testimony').length === 0 ? (
               <div className="text-center py-20 text-slate-300 italic text-sm text-center">Ainda sem testemunhos compartilhados.</div>
             ) : (
+              // Modifique aqui para alterar o layout de exibição de cada testemunho (card)
               allRequests.filter(r => r.type === 'testimony').map(t => (
                 <div key={t.id} className="bg-white p-6 rounded-3xl shadow-md border border-slate-50 mb-4 transition-all hover:shadow-lg relative text-left">
                   <div className="flex justify-between items-start mb-2 text-left">
@@ -827,6 +860,7 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
         )}
 
         {view === 'add-testimony' && (
+          // Modifique aqui para alterar os campos do formulário de Adicionar Testemunho
           <div className="bg-white p-8 rounded-3xl shadow-2xl animate-slide-up border border-slate-100 text-left">
             <div className="flex items-center gap-2 mb-8 text-left">
               <button onClick={() => setView('testimonies')} className="p-2 -ml-2 text-slate-400"><X size={20} /></button>
@@ -846,6 +880,7 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
         )}
 
         {view === 'prayer' && (
+          // Modifique aqui para alterar os campos do formulário de Pedido de Oração
           <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100 text-left">
             <div className="flex items-center gap-2 mb-8 text-left">
               <button onClick={() => setView('home')} className="p-2 -ml-2 text-slate-400"><X size={20} /></button>
@@ -883,6 +918,7 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
         )}
 
         {view === 'visit' && (
+          // Modifique aqui para alterar os campos do formulário de Solicitação de Visita
           <div className="bg-white p-7 rounded-3xl shadow-2xl animate-slide-up border border-slate-100 text-left">
             <div className="flex items-center gap-2 mb-8 text-left">
               <button onClick={() => setView('home')} className="p-2 -ml-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors text-center"><X size={20} /></button>
@@ -927,6 +963,7 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
         )}
 
         {view === 'login' && (
+          // Modifique aqui para alterar o layout da tela de Login
           <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-8 animate-fade-in mt-10 text-center">
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 border border-slate-100 shadow-inner shrink-0 text-center"><Lock size={40} /></div>
             <h2 className="text-2xl font-bold text-[#051c38] text-center">Acesso Pastoral</h2>
@@ -939,6 +976,7 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
         )}
 
         {view === 'admin' && isAdmin && (
+          // Modifique aqui para alterar o layout do Painel Administrativo
           <div className="space-y-5 animate-fade-in text-left pb-10 text-left">
             <div className="flex items-center justify-between bg-white p-5 rounded-3xl shadow-md border border-slate-100 text-left">
               <h2 className="font-bold text-sm text-[#051c38] uppercase tracking-wider text-left">Gestão Pastoral</h2>
@@ -1026,12 +1064,14 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
         )}
       </main>
 
+      {/* Modifique aqui para alterar os itens da barra de navegação inferior */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-100 px-6 py-4 flex justify-around items-center z-40 shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.1)]">
         <button onClick={() => { setView('home'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'home' ? 'text-[#051c38] scale-110' : 'text-slate-400 hover:text-[#051c38]'}`}><Home size={26} /><span className="text-[9px] font-bold uppercase tracking-widest">Início</span></button>
         <button onClick={handleShare} className="flex flex-col items-center gap-1.5 text-slate-400 active:scale-110 hover:text-[#cfa855]"><div className="bg-[#cfa855]/10 p-2 rounded-xl text-[#cfa855] text-center"><Share2 size={26} /></div><span className="text-[9px] font-bold uppercase tracking-widest text-center">Compartilhar</span></button>
         <button onClick={() => { setView('history'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'history' ? 'text-[#051c38] scale-110' : 'text-slate-400 hover:text-[#051c38]'}`}><Church size={26} /><span className="text-[9px] font-bold uppercase tracking-widest text-center">Nossa História</span></button>
       </nav>
 
+      {/* Modifique aqui para alterar os estilos globais, animações e fontes personalizadas */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slide-up { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -1047,4 +1087,3 @@ export default function FluxoInterativoEsperanca({ isOpen, onClose, onFinish }) 
     </div>
   );
 }
-
