@@ -133,7 +133,37 @@ const Header = ({ isScrolled, onLoginClick, onLogoClick, pendingCount }) => (
          )}
        </button>
     </div>
+    
+    <div 
+      onClick={onLogoClick}
+      className="flex flex-col items-center justify-center h-full px-4 overflow-hidden text-center cursor-pointer group/logo"
+    >
+      {/* Modifique aqui para alterar a imagem do Logo */}
+      <div className={`relative flex items-center justify-center transition-all duration-500 ease-out transform group-active/logo:scale-95 ${isScrolled ? 'scale-0 h-0 opacity-0' : 'scale-100 h-28 w-28 mb-3 opacity-100'}`}>
+        <div className="absolute inset-0 border-2 border-[#cfa855] rounded-full animate-pulse group-hover/logo:border-white transition-colors"></div>
+        <img
+          src="/logo.png"
+          alt="TMHE Logo"
+          className="z-10 w-24 h-24 object-contain"
+          onError={(e) => { e.target.src = "https://via.placeholder.com/150?text=TMHE"; }}
+        />
+      </div>
+      
+      {/* Modifique aqui para alterar o Nome da Igreja e o Subtítulo no cabeçalho */}
+      <div className="transition-all duration-500 ease-out">
+        <h1 className={`font-bold tracking-wider text-white transition-all duration-500 group-hover/logo:text-[#cfa855] ${isScrolled ? 'text-xl' : 'text-2xl'}`}>
+          TMHE
+        </h1>
+        <p className={`uppercase tracking-[0.15em] text-[#cfa855] font-semibold transition-all duration-500 group-hover/logo:text-white ${isScrolled ? 'text-[8px] opacity-70' : 'text-[10px]'}`}>
+          Templo Missionário Há Esperança
+        </p>
+      </div>
+    </div>
+  </header>
+);
+
 // MODIFICAÇÃO RECENTE ---
+
 const FluxoInterativoEsperanca = ({ isOpen, onClose, onFinish }) => {
   const [step, setStep] = useState(0);
 
@@ -195,33 +225,6 @@ const FluxoInterativoEsperanca = ({ isOpen, onClose, onFinish }) => {
   );
 };
 // FIM DA MODIFICAÇÃO RECENTE ---
-    <div 
-      onClick={onLogoClick}
-      className="flex flex-col items-center justify-center h-full px-4 overflow-hidden text-center cursor-pointer group/logo"
-    >
-      {/* Modifique aqui para alterar a imagem do Logo */}
-      <div className={`relative flex items-center justify-center transition-all duration-500 ease-out transform group-active/logo:scale-95 ${isScrolled ? 'scale-0 h-0 opacity-0' : 'scale-100 h-28 w-28 mb-3 opacity-100'}`}>
-        <div className="absolute inset-0 border-2 border-[#cfa855] rounded-full animate-pulse group-hover/logo:border-white transition-colors"></div>
-        <img
-          src="/logo.png"
-          alt="TMHE Logo"
-          className="z-10 w-24 h-24 object-contain"
-          onError={(e) => { e.target.src = "https://via.placeholder.com/150?text=TMHE"; }}
-        />
-      </div>
-      
-      {/* Modifique aqui para alterar o Nome da Igreja e o Subtítulo no cabeçalho */}
-      <div className="transition-all duration-500 ease-out">
-        <h1 className={`font-bold tracking-wider text-white transition-all duration-500 group-hover/logo:text-[#cfa855] ${isScrolled ? 'text-xl' : 'text-2xl'}`}>
-          TMHE
-        </h1>
-        <p className={`uppercase tracking-[0.15em] text-[#cfa855] font-semibold transition-all duration-500 group-hover/logo:text-white ${isScrolled ? 'text-[8px] opacity-70' : 'text-[10px]'}`}>
-          Templo Missionário Há Esperança
-        </p>
-      </div>
-    </div>
-  </header>
-);
 
 // Modifique aqui para alterar o texto dos Termos de Uso e Política de Privacidade (LGPD)
 const LegalModal = ({ isOpen, onClose }) => {
