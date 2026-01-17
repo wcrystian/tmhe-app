@@ -57,7 +57,7 @@ import {
   ScrollText, 
   BarChart3, 
   Eye,
-  Flame, // Adicionado conforme solicitado
+  Flame, 
   Sun,
   ArrowRight, 
   ChevronLeft, 
@@ -671,15 +671,8 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden group text-left">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-[#cfa855]/5 rounded-bl-full -mr-8 -mt-8 transition-all group-hover:scale-110"></div>
-              <h2 className="text-xl font-bold text-[#051c38] mb-2 flex items-center gap-2 text-left">
-                  Bem-vindo
-              </h2>
-              <p className="text-slate-500 text-sm leading-relaxed font-medium text-left mb-6">Estamos prontos para o ouvir e orar contigo.</p>
-          
-            {/* --- INSERÇÃO DO BOTÃO "COMEÇAR JORNADA" --- */}
-            <div className="mb-6">
+            {/* --- BOTÃO "COMEÇAR JORNADA" AGORA AQUI FORA PARA DESTAQUE --- */}
+            <div className="py-2">
               <button 
                 onClick={() => setShowFlow(true)}
                 className="w-full bg-[#cfa855] text-[#051c38] py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-lg hover:bg-[#b8954a] transition-all"
@@ -687,39 +680,47 @@ export default function App() {
                 Começar Jornada <Sparkles size={16} />
               </button>
             </div>
-            {/* ------------------------------------------- */}
+            {/* ------------------------------------------------------------- */}
 
-            <div className="grid grid-cols-1 gap-3">
-              <button onClick={() => { setView('prayer'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
-                <div className="flex items-center gap-4 text-left">
-                  <div className="bg-red-50 p-3 rounded-xl text-red-500 group-hover:scale-110 transition-transform shrink-0"><Heart fill="currentColor" size={24} /></div>
-                  <div className="text-left flex-1">
-                    <h3 className="font-bold text-slate-800 uppercase tracking-tight text-left">Pedido de Oração</h3>
-                    <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider text-left">Compartilhe o seu fardo</p>
+            <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden group text-left">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-[#cfa855]/5 rounded-bl-full -mr-8 -mt-8 transition-all group-hover:scale-110"></div>
+              <h2 className="text-xl font-bold text-[#051c38] mb-2 flex items-center gap-2 text-left">
+                  Bem-vindo
+              </h2>
+              <p className="text-slate-500 text-sm leading-relaxed font-medium text-left mb-6">Estamos prontos para o ouvir e orar contigo.</p>
+          
+              <div className="grid grid-cols-1 gap-3">
+                <button onClick={() => { setView('prayer'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
+                  <div className="flex items-center gap-4 text-left">
+                    <div className="bg-red-50 p-3 rounded-xl text-red-500 group-hover:scale-110 transition-transform shrink-0"><Heart fill="currentColor" size={24} /></div>
+                    <div className="text-left flex-1">
+                      <h3 className="font-bold text-slate-800 uppercase tracking-tight text-left">Pedido de Oração</h3>
+                      <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider text-left">Compartilhe o seu fardo</p>
+                    </div>
                   </div>
-                </div>
-                <ChevronRight className="text-slate-300" />
-              </button>
-              <button onClick={() => { setView('visit'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
-                <div className="flex items-center gap-4 text-left">
-                  <div className="bg-blue-50 p-3 rounded-xl text-blue-500 group-hover:scale-110 transition-transform shrink-0"><Home size={24} /></div>
-                  <div className="text-left flex-1">
-                    <h3 className="font-bold text-slate-800 uppercase tracking-tight text-left">Solicitar Visita</h3>
-                    <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider text-left">Receba apoio pastoral</p>
+                  <ChevronRight className="text-slate-300" />
+                </button>
+                <button onClick={() => { setView('visit'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
+                  <div className="flex items-center gap-4 text-left">
+                    <div className="bg-blue-50 p-3 rounded-xl text-blue-500 group-hover:scale-110 transition-transform shrink-0"><Home size={24} /></div>
+                    <div className="text-left flex-1">
+                      <h3 className="font-bold text-slate-800 uppercase tracking-tight text-left">Solicitar Visita</h3>
+                      <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider text-left">Receba apoio pastoral</p>
+                    </div>
                   </div>
-                </div>
-                <ChevronRight className="text-slate-300" />
-              </button>
-              <button onClick={() => { setView('testimonies'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
-                <div className="flex items-center gap-4 text-left">
-                  <div className="bg-amber-50 p-3 rounded-xl text-amber-600 group-hover:scale-110 transition-transform shrink-0"><Quote size={24} /></div>
-                  <div className="text-left flex-1">
-                    <h3 className="font-bold text-slate-800 uppercase tracking-tight text-left">Testemunhos</h3>
-                    <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider text-left">Veja vitórias de fé</p>
+                  <ChevronRight className="text-slate-300" />
+                </button>
+                <button onClick={() => { setView('testimonies'); window.scrollTo(0,0); }} className="w-full bg-white p-5 rounded-2xl shadow-md flex items-center justify-between border border-transparent hover:border-[#cfa855] transition-all group text-left">
+                  <div className="flex items-center gap-4 text-left">
+                    <div className="bg-amber-50 p-3 rounded-xl text-amber-600 group-hover:scale-110 transition-transform shrink-0"><Quote size={24} /></div>
+                    <div className="text-left flex-1">
+                      <h3 className="font-bold text-slate-800 uppercase tracking-tight text-left">Testemunhos</h3>
+                      <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider text-left">Veja vitórias de fé</p>
+                    </div>
                   </div>
-                </div>
-                <ChevronRight className="text-slate-300" />
-              </button>
+                  <ChevronRight className="text-slate-300" />
+                </button>
+              </div>
             </div>
 
             <button onClick={() => setShowSchedule(true)} className="w-full bg-[#051c38] p-5 rounded-2xl shadow-lg border border-[#cfa855]/30 flex items-center justify-between group overflow-hidden relative mt-6">
