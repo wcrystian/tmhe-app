@@ -76,28 +76,28 @@ function CrossIcon({ className }) {
 const GOSPEL_STEPS = [
   { 
     title: "Deus te Ama", 
-    text: "Não és um acidente. Deus criou-te com um propósito e ama-te incondicionalmente, independentemente do teu passado.", 
+    text: "Você não é um acidente. Deus te criou com um propósito e te ama incondicionalmente, independentemente do teu passado.", 
     verse: "Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito...",
     ref: "João 3:16",
     icon: <Heart size={48} className="text-red-500" fill="currentColor" /> 
   },
   { 
     title: "O Problema", 
-    text: "As nossas escolhas e falhas afastaram-nos de Deus, criando um abismo que nenhum esforço humano pode cruzar.", 
+    text: "As nossas escolhas e falhas nos afastaram de Deus, criando um abismo que nenhum esforço humano pode cruzar.", 
     verse: "Pois todos pecaram e carecem da glória de Deus.",
     ref: "Romanos 3:23",
     icon: <Flame size={48} className="text-orange-500" /> 
   },
   { 
     title: "A Solução", 
-    text: "Jesus Cristo veio para ser a ponte. Ele morreu no teu lugar para que pudesses ter vida e paz com o Pai.", 
+    text: "Jesus Cristo veio para ser a ponte. Ele morreu no teu lugar para que você pudesse ter vida e paz com o Pai.", 
     verse: "Mas Deus prova o seu próprio amor para connosco pelo facto de ter Cristo morrido por nós, sendo nós ainda pecadores.",
     ref: "Romanos 5:8",
     icon: <CrossIcon className="text-blue-500" /> 
   },
   { 
     title: "A Tua Escolha", 
-    text: "Deus não força ninguém. Ele está a bater à porta do teu coração agora. Aceitas o convite d'Ele?", 
+    text: "Deus não força ninguém. Ele está a bater à porta do teu coração agora. Aceita o convite Dele? Clique no botão abaixo e agende uma visita", 
     verse: "Eis que estou à porta e bato; se alguém ouvir a minha voz e abrir a porta, entrarei em sua casa...",
     ref: "Apocalipse 3:20",
     icon: <Sun size={48} className="text-amber-500" /> 
