@@ -1,17 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  signInAnonymously, 
-  onAuthStateChanged, 
-  signInWithCustomToken 
-} from 'firebase/auth';
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  serverTimestamp 
-} from 'firebase/firestore';
 import { 
   Heart, 
   Flame, 
@@ -34,24 +21,6 @@ function CrossIcon({ className }) {
     </svg>
   );
 }
-
-// --- CONFIGURAÇÃO FIREBASE (Protegida) ---
-const getFirebaseConfig = () => {
-  try {
-    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-      return JSON.parse(__firebase_config);
-    }
-  } catch (e) {
-    console.error("Erro ao carregar config:", e);
-  }
-  return { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "" };
-};
-
-const firebaseConfig = getFirebaseConfig();
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'tmhe-church-app';
 
 // --- DADOS DO FLUXO (Definidos após os ícones) ---
 const GOSPEL_STEPS = [
