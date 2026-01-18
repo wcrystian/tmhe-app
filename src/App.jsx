@@ -76,28 +76,28 @@ function CrossIcon({ className }) {
 const GOSPEL_STEPS = [
   { 
     title: "Deus te Ama", 
-    text: "Você não é um acidente. Deus te criou com um propósito e te ama incondicionalmente, independentemente do teu passado.", 
+    text: "Não és um acidente. Deus criou-te com um propósito e ama-te incondicionalmente, independentemente do teu passado.", 
     verse: "Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito...",
     ref: "João 3:16",
     icon: <Heart size={48} className="text-red-500" fill="currentColor" /> 
   },
   { 
     title: "O Problema", 
-    text: "As nossas escolhas e falhas nos afastaram de Deus, criando um abismo que nenhum esforço humano pode cruzar.", 
+    text: "As nossas escolhas e falhas afastaram-nos de Deus, criando um abismo que nenhum esforço humano pode cruzar.", 
     verse: "Pois todos pecaram e carecem da glória de Deus.",
     ref: "Romanos 3:23",
     icon: <Flame size={48} className="text-orange-500" /> 
   },
   { 
     title: "A Solução", 
-    text: "Jesus Cristo veio para ser a ponte. Ele morreu no teu lugar para que você pudesse ter vida e paz com o Pai.", 
+    text: "Jesus Cristo veio para ser a ponte. Ele morreu no teu lugar para que pudesses ter vida e paz com o Pai.", 
     verse: "Mas Deus prova o seu próprio amor para connosco pelo facto de ter Cristo morrido por nós, sendo nós ainda pecadores.",
     ref: "Romanos 5:8",
     icon: <CrossIcon className="text-blue-500" /> 
   },
   { 
     title: "A Tua Escolha", 
-    text: "Deus não força ninguém. Ele está a bater à porta do teu coração agora. Aceita o convite Dele? Clique no botão abaixo e agende uma visita", 
+    text: "Deus não força ninguém. Ele está a bater à porta do teu coração agora. Aceitas o convite d'Ele?", 
     verse: "Eis que estou à porta e bato; se alguém ouvir a minha voz e abrir a porta, entrarei em sua casa...",
     ref: "Apocalipse 3:20",
     icon: <Sun size={48} className="text-amber-500" /> 
@@ -412,13 +412,16 @@ export default function App() {
     return onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
   }, [configMissing]);
 
+  // --- ANALYTICS (CORRIGIDO) ---
   useEffect(() => {
     if (!user || configMissing) return;
      
     const trackVisit = async () => {
-      if (sessionStorage.getItem('tmhe_counted')) return;
+      // COMENTADO PARA TESTES: Descomente para produção para não contar reloads
+      // if (sessionStorage.getItem('tmhe_counted')) return;
       
-      const today = new Date().toISOString().split('T')[0];
+      // FIX DE DATA: Usando data local (YYYY-MM-DD) ao invés de UTC para evitar confusão de fuso horário
+      const today = new Date().toLocaleDateString('en-CA'); 
       const statsRef = doc(db, 'artifacts', appId, 'public', 'data', 'analytics', 'stats');
       
       try {
@@ -426,7 +429,7 @@ export default function App() {
           total: increment(1),
           [`daily.${today}`]: increment(1)
         }, { merge: true });
-        sessionStorage.setItem('tmhe_counted', 'true');
+        // sessionStorage.setItem('tmhe_counted', 'true'); // Comentado também
       } catch (e) {
         console.error("Erro ao rastrear acesso:", e);
       }
@@ -434,6 +437,7 @@ export default function App() {
      
     trackVisit();
   }, [user, configMissing]);
+  // -----------------------------
 
   useEffect(() => {
     if (!user || configMissing) return;
@@ -447,7 +451,8 @@ export default function App() {
     const unsubStats = onSnapshot(statsRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        const todayKey = new Date().toISOString().split('T')[0];
+        // FIX DE DATA: Usando a mesma formatação local para ler o dado correto
+        const todayKey = new Date().toLocaleDateString('en-CA');
         setAnalytics({
           total: data.total || 0,
           today: data.daily?.[todayKey] || 0
@@ -671,7 +676,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* --- BOTÃO "COMEÇAR JORNADA" AGORA AQUI FORA PARA DESTAQUE --- */}
+            {/* --- BOTÃO "COMEÇAR JORNADA" --- */}
             <div className="py-2">
               <button 
                 onClick={() => setShowFlow(true)}
@@ -680,7 +685,7 @@ export default function App() {
                 Começar Jornada <Sparkles size={16} />
               </button>
             </div>
-            {/* ------------------------------------------------------------- */}
+            {/* --------------------------------- */}
 
             <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden group text-left">
               <div className="absolute top-0 right-0 w-24 h-24 bg-[#cfa855]/5 rounded-bl-full -mr-8 -mt-8 transition-all group-hover:scale-110"></div>
@@ -987,65 +992,4 @@ export default function App() {
 
                   if (isVisit) {
                     if (req.status === 'pending') { borderClass = 'border-red-500'; statusLabel = 'Não Confirmada'; statusBg = 'bg-red-50 text-red-600'; } 
-                    else if (req.status === 'confirmed') { borderClass = 'border-yellow-500'; statusLabel = 'Confirmada'; statusBg = 'bg-yellow-50 text-yellow-700'; } 
-                    else if (req.status === 'completed') { borderClass = 'border-green-500 opacity-60'; statusLabel = 'Realizada'; statusBg = 'bg-green-50 text-green-700'; }
-                  } else {
-                    if (req.status === 'completed') { borderClass = 'border-green-500 opacity-60'; statusLabel = 'Concluído'; statusBg = 'bg-green-50 text-green-700'; }
-                  }
-
-                  return (
-                    <div key={req.id} className={`bg-white rounded-[2rem] p-6 border-l-8 shadow-md relative transition-all text-left ${borderClass}`}>
-                      <div className="absolute top-5 right-5 flex gap-3 text-left">
-                        {isVisit && req.status === 'confirmed' && (
-                          <button onClick={() => handlePrintVisit(req)} className="text-[#cfa855] hover:text-[#051c38] transition-colors p-1 text-center" title="Imprimir Ficha"><Printer size={18} /></button>
-                        )}
-                        <button onClick={() => handleDelete(req.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1 text-center"><Trash2 size={16} /></button>
-                      </div>
-                      <div className="flex items-center gap-2 mb-3 text-left">
-                        <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full ${statusBg} text-left`}>{statusLabel}</span>
-                        {!isVisit && <span className="text-[9px] font-bold text-slate-300 uppercase text-left">{req.type === 'prayer' ? 'Oração' : 'Testemunho'}</span>}
-                      </div>
-                      <h4 className="font-black text-slate-800 text-lg mb-2 text-left">{req.isAnonymous ? 'Anônimo' : safeRender(req.name)}</h4>
-                      {req.contact && <a href={`https://wa.me/55${req.contact.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1.5 bg-green-50 w-fit px-3 py-1.5 rounded-xl text-left"><Phone size={14} /> {safeRender(req.contact)}</a>}
-                      {isVisit && (
-                        <div className="space-y-2 mb-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
-                          <p className="text-[11px] text-slate-600 flex items-center gap-2 text-left"><MapPin size={12} className="text-[#cfa855]" /> <strong>Endereço:</strong> {safeRender(req.address)}</p>
-                          <p className="text-[11px] text-slate-600 flex items-center gap-2 text-left"><Calendar size={12} className="text-[#cfa855]" /> <strong>Data/Hora:</strong> {safeRender(req.preferredDays)} às {safeRender(req.timeSlot)}h</p>
-                        </div>
-                      )}
-                      {req.message && <p className="text-sm text-slate-600 italic leading-relaxed mb-6 text-left">"{safeRender(req.message)}"</p>}
-                      <div className="flex flex-col gap-2 text-left">
-                        {isVisit && req.status === 'pending' && <button onClick={() => handleUpdateStatus(req.id, 'confirmed')} className="w-full py-3 bg-yellow-400 text-yellow-900 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm text-center"><CalendarCheck size={14} /> Confirmar Visita</button>}
-                        {isVisit && req.status === 'confirmed' && <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-3 bg-green-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm text-center"><CheckCircle2 size={14} /> Marcar como Realizada</button>}
-                        {!isVisit && req.status === 'pending' && <button onClick={() => handleUpdateStatus(req.id, 'completed')} className="w-full py-3 bg-[#051c38] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest text-center">Finalizar Atendimento</button>}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        )}
-      </main>
-
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-100 px-6 py-4 flex justify-around items-center z-40 shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.1)]">
-        <button onClick={() => { setView('home'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'home' ? 'text-[#051c38] scale-110' : 'text-slate-400 hover:text-[#051c38]'}`}><Home size={26} /><span className="text-[9px] font-bold uppercase tracking-widest">Início</span></button>
-        <button onClick={handleShare} className="flex flex-col items-center gap-1.5 text-slate-400 active:scale-110 hover:text-[#cfa855]"><div className="bg-[#cfa855]/10 p-2 rounded-xl text-[#cfa855] text-center"><Share2 size={26} /></div><span className="text-[9px] font-bold uppercase tracking-widest text-center">Compartilhar</span></button>
-        <button onClick={() => { setView('history'); window.scrollTo(0,0); }} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'history' ? 'text-[#051c38] scale-110' : 'text-slate-400 hover:text-[#051c38]'}`}><Church size={26} /><span className="text-[9px] font-bold uppercase tracking-widest text-center">Nossa História</span></button>
-      </nav>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes slide-up { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes bounce-in { 0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
-        .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
-        .animate-slide-up { animation: slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-        .animate-bounce-in { animation: bounce-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        input::placeholder, textarea::placeholder { color: #cbd5e1; font-weight: 400; }
-        * { -webkit-tap-highlight-color: transparent; }
-      `}} />
-    </div>
-  );
-}
+                    else if (req.status === 'confirmed') { borderClass = 'border-yellow-500'; statusLabel = 'Confirmada'; statusBg = 'bg-yellow-50 text-
